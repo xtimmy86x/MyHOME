@@ -12,8 +12,9 @@ documented in the [implemented API](panel-websocket-api.md) and
 This document continues the existing source comparison; it does not restart the
 panel implementation or propose copying another fork wholesale. The original
 comparison used our panel 0.9.0 at `02ce199` and Interstellar0verdrive's fork at
-`229b1eb`. Our current side is panel 0.22.1 on `feat/myhome-sidepanel`; `e7b4d32` is the
-preceding temporary-inventory implementation;
+`229b1eb`. Our current side is panel 0.22.1 at
+[`6d6eea6`](https://github.com/xtimmy86x/MyHOME/tree/6d6eea6138773120ff7b92b40901ec49d1d90a6d);
+`e7b4d32` is the preceding temporary-inventory implementation;
 `b42fbbe` is the preceding WHO1001 read implementation;
 `9b839be` remains the preceding 0.20.0 implementation baseline.
 The branch also integrates `v2-phase1-architecture` through `db95d1f` (2026-09-15).
@@ -39,7 +40,7 @@ independent of opening the panel.
 
 | Implementation | Exact baseline | Relevant evidence |
 | --- | --- | --- |
-| Our `feat/myhome-sidepanel`, panel 0.22.1 | Current implementation in this branch | [Implemented API](panel-websocket-api.md), `panel.py`, `cover_profiles.py`, `cover_profile_provenance.py`, `cover_profile_export.py`, `cover_calibration.py`, `cover_calibration_automatic.py`, `cover_calibration_batch.py`, `hardware_inspection.py`, `frontend/panel/` |
+| Our `feat/myhome-sidepanel`, panel 0.22.1 | [`6d6eea6`](https://github.com/xtimmy86x/MyHOME/tree/6d6eea6138773120ff7b92b40901ec49d1d90a6d) | [Implemented API](panel-websocket-api.md), `panel.py`, `cover_profiles.py`, `cover_profile_provenance.py`, `cover_profile_export.py`, `cover_calibration.py`, `cover_calibration_automatic.py`, `cover_calibration_batch.py`, `hardware_inspection.py`, `frontend/panel/` |
 | Integrated `v2-phase1-architecture` base | [`db95d1f`](https://github.com/xtimmy86x/MyHOME/tree/db95d1f349036229b2965341622cf0f2ed3859cc) | Restored actuator lock/unlock buttons with stale-registration filtering; safe entity IDs for names with apostrophes; F454 alarm replay and keepalive/reconnect regression tests |
 | Interstellar0verdrive's `MyHOME-stability`, `master` | [`229b1eb`](https://github.com/Interstellar0verdrive/MyHOME-stability/tree/229b1eb30558012674e1e7f5c2059a58300f09df) | [API reference](https://github.com/Interstellar0verdrive/MyHOME-stability/blob/229b1eb30558012674e1e7f5c2059a58300f09df/docs/panel-websocket-api.md), `websocket_api.py`, `panel_data.py`, `panel_write.py`, `panel_schemas.py`, `panel_src/` |
 | Upstream #349, backend only | [`e807e99`](https://github.com/OpenWebNet-HA/MyHOME/tree/e807e9986ca9e09e8f3c516bd9c5d8b55e076485) | [PR #349](https://github.com/OpenWebNet-HA/MyHOME/pull/349), `cover.py`, services, [runtime/service documentation](https://github.com/OpenWebNet-HA/MyHOME/blob/e807e9986ca9e09e8f3c516bd9c5d8b55e076485/docs/configuration/services.md) |

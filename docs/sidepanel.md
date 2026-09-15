@@ -15,6 +15,14 @@ The layout takes inspiration from ha-s7plc: a gateway overview, responsive card
 grid, category filters, and editing dialogs. It uses Home Assistant theme colors
 and provides English and Italian labels, with English fallback for other languages.
 
+## Faster hardware reads (0.22.1)
+
+The panel no longer waits the full 20 seconds when an identified device returns
+the observed WHO1001 description boundary. It finishes after 0.5 seconds without
+further WHO1001 frames. Trailing diagnostic frames restart that short wait; the
+20-second maximum remains for missing boundaries or ongoing traffic. No additional
+request is sent. See the [completion rules](hardware-inspection.md#early-description-completion-0221).
+
 ## Temporary hardware inventory (0.22.0)
 
 Completed, identified reads now remain in a temporary inventory while this panel
@@ -36,7 +44,8 @@ when full. No automatic scan or new bus operation is introduced.
 
 Open **Hardware · experimental**, select a connected gateway and enter a known
 local A/PL. **Read device** sends one WHO1001 DIM0 description request and collects
-responses for 20 seconds. The view shows hardware ID, firmware, raw catalogue
+responses until a qualified description boundary and 0.5 seconds of diagnostic
+quiet, with a maximum wait of 20 seconds. The view shows hardware ID, firmware, raw catalogue
 signature, internal modules/Object IDs and module addresses when received.
 Opening the view sends nothing. **End reading** or navigation cancels queued work
 and stops collection; results are transient. Unknown and unassociated responses
@@ -308,7 +317,7 @@ requirements, limits and real-gateway validation steps.
 
 ## Panel versioning
 
-The panel has an independent version, currently **0.22.0**, defined by
+The panel has an independent version, currently **0.22.1**, defined by
 `PANEL_VERSION` in `custom_components/myhome/panel.py`. Its version appears under
 the MyHOME header; the integration version is shown separately at the bottom.
 The label uses the version of the JavaScript module actually loaded by the tab.

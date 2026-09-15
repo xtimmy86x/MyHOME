@@ -1,4 +1,4 @@
-# Experimental WHO1001 hardware inspection — panel 0.22.0
+# Experimental WHO1001 hardware inspection — panel 0.22.1
 
 This first read-only view implements a small part of anotherjulien's proposal to
 inspect physical devices independently from normal WHO/WHERE entities. It reads
@@ -12,7 +12,9 @@ create a physical inventory in storage or change Home Assistant registries.
    A=1, PL=1 produces `11`. PL=0, ambient/group addresses and bus routing are
    not accepted in this first version.
 3. Click **Read device**. Opening the section itself sends nothing.
-4. After dispatch, the view collects responses for 20 seconds. **End reading**
+4. After dispatch, collection ends 0.5 seconds after the observed description
+   boundary, provided no further WHO1001 messages arrive. Without that boundary
+   it waits up to 20 seconds. **End reading**
    or navigating away stops collection and invalidates a still-queued request.
    A request already transmitted cannot be withdrawn; no follow-up frame is sent.
 5. Compare the hardware ID, firmware, internal slots and module addresses with
@@ -152,3 +154,34 @@ when present in the selected gateway's inventory. Slots 3/4 may have no candidat
 Switch to Entities and back: the card remains without another diagnostic request.
 Clear this gateway's inventory: the card disappears without a bus command. Reload
 the panel: no retained hardware inventory should reappear.
+
+
+## Early description completion (0.22.1)
+
+The user's supplied 13-frame capture spans about 0.675 seconds and ends with
+`*1001*4*0##`. Waiting the entire 20 seconds after that burst added unnecessary
+latency. The backend now treats this exact RX frame as an observed interview
+boundary **only after receiving a valid hardware ID at the requested local A/PL**.
+An early/generic boundary before that identity does not enable fast completion.
+DIM4 responses and WHAT4 at another WHERE do not enable it either.
+
+Once armed, a separate 0.5-second quiet timer ends collection normally. Every
+subsequent retained WHO1001 RX frame restarts that timer, allowing trailing
+modules/addresses to be included. Ordinary WHO1/2 traffic does not prolong it.
+The independent 20-second maximum, measured from request TX, is never extended.
+If no qualified boundary is received, the existing maximum wait still applies.
+Cancellation, shutdown, overlapping diagnostic TX, conflicting IDs and all bounds
+cancel both timers and retain their original error/cleanup behavior. No new bus
+frame is transmitted. The normal finished event enables the next read and feeds
+the temporary inventory through the same existing path.
+
+The [interview notes](https://github.com/OpenWebNet-HA/OWNd/wiki/Diagnostic-Device-interview)
+were rechecked on 2026-09-15. They describe WHAT4 as an observable boundary while
+explicitly leaving its broader semantics under investigation. Thus this heuristic
+still does not prove description completeness or correlation with external
+clients. Existing guidance to avoid concurrent diagnostic tools remains relevant.
+The supplied capture is replayed in a regression test, with additional cases for
+trailing frames, wrong/early boundaries, the maximum deadline and cancellation.
+With the same arrival timing, completion should occur about 1.2 seconds after the
+first response instead of waiting the full 20 seconds; physical timing acceptance
+of this patch is pending.

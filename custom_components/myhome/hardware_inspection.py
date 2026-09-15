@@ -22,6 +22,7 @@ from .websocket import _get_gateway_and_monitor
 WS_INSPECT = "myhome/hardware/inspect"
 DATA_KEY = "myhome_hardware_inspections"
 READ_SECONDS = 20
+SETTLE_SECONDS = 0.5
 QUEUE_SECONDS = 10
 MAX_FRAMES = 200
 MAX_MODULES = 64
@@ -74,6 +75,7 @@ class HardwareInspection:
         self.unassociated = 0
         self.expires = monotonic() + QUEUE_SECONDS
         self.active = True
+        self.settle_timer = None
         self.unsubscribe = monitor.subscribe(self.on_frame)
         self.shutdown = hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.on_shutdown)
         self.timer = hass.loop.call_later(QUEUE_SECONDS, self.finish, "queue_timeout")
@@ -112,6 +114,8 @@ class HardwareInspection:
         self.active = False
         self.phase, self.reason = "finished", reason
         self.timer.cancel()
+        if self.settle_timer is not None:
+            self.settle_timer.cancel()
         self.unsubscribe()
         if self.shutdown is not None:
             unsubscribe, self.shutdown = self.shutdown, None
@@ -156,6 +160,13 @@ class HardwareInspection:
             else:
                 self.unassociated += 1
         if self.active:
+            # WHAT4 is an observed interview boundary, not proof of completeness.
+            # Arm only after a scoped identity; allow trailing WHO1001 frames to
+            # settle without ever extending the independent 20-second ceiling.
+            if self.settle_timer is not None or (raw == "*1001*4*0##" and self.hardware_id is not None):
+                if self.settle_timer is not None:
+                    self.settle_timer.cancel()
+                self.settle_timer = self.hass.loop.call_later(SETTLE_SECONDS, self.finish)
             self.emit()
 
     def decode(self, dimension, values):

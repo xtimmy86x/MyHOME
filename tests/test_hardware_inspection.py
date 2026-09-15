@@ -22,13 +22,13 @@ installation = installation_fixture
 
 
 @pytest.fixture
-async def inspection(hass, installation):
+async def inspection(hass, installation, request):
     entry = installation.entries[0]
     monitor = BusMonitor(dedup_window=0)
     gw = SimpleNamespace(is_connected=True, send_buffer=asyncio.Queue())
     hass.data[DOMAIN][entry.data["mac"]].update({CONF_ENTITY: gw, "bus_monitor": monitor})
     connection = MagicMock(user=SimpleNamespace(is_admin=True), subscriptions={})
-    msg = {"id": 20, "entry_id": entry.entry_id, "where": "0015", "type": hw.WS_INSPECT}
+    msg = {"id": 20, "entry_id": entry.entry_id, "where": getattr(request, "param", "0015"), "type": hw.WS_INSPECT}
     hw.ws_inspect(hass, connection, msg)
     await hass.async_block_till_done()
     session = hass.data[hw.DATA_KEY][entry.entry_id]
@@ -96,6 +96,98 @@ async def test_read_sends_only_dim0_and_decodes_scoped_description_without_write
     assert dict(inspection.entry.data) == original
     assert not inspection.monitor._subscribers
     assert not hass.data[hw.DATA_KEY]
+
+
+@pytest.mark.parametrize("inspection", ["01"], indirect=True)
+async def test_real_f454_description_finishes_after_boundary_settles(inspection):
+    """User's 2026-09-15 capture: 13 RX frames in about 0.675 seconds."""
+    dispatch(inspection)
+    frames = [
+        "*#1001*01*1*107*6*1*1##",
+        "*1001*3*71##",
+        "*#1001*01*2*1*1*0##",
+        "*#1001*01*4*0*0*0*0*0*0##",
+        "*#1001*01*7*111111111111111101101111##",
+        "*#1001*01*13*10179593##",
+        "*#1001*01*30*1*6*0##",
+        "*#1001*01*32#1*1*24##",
+        "*#1001*01*30*2*6*0##",
+        "*#1001*01*32#2*1*01##",
+        "*#1001*01*30*3*400*0##",
+        "*#1001*01*30*4*400*0##",
+        "*1001*4*0##",
+    ]
+    for raw in frames[:-1]:
+        receive(inspection, raw)
+        assert inspection.session.settle_timer is None
+    receive(inspection, frames[-1])
+    session = inspection.session
+    assert session.active and session.phase == "reading"
+    assert session.settle_timer.when() < session.timer.when()
+    session.settle_timer._run()
+    assert not session.active and session.phase == "finished" and session.reason is None
+    assert session.hardware_id == "009B5409" and session.firmware == "1.1.0"
+    assert session.identity == ["107", "6", "1", "1"]
+    assert [m["object_id"] for m in session.modules.values()] == [6, 6, 400, 400]
+    assert [m["address"] for m in session.modules.values()] == ["24", "01", None, None]
+    assert [frame["raw"] for frame in session.frames] == frames
+    assert session.timer.cancelled() and session.settle_timer.cancelled()
+    assert not inspection.monitor._subscribers and inspection.gw.send_buffer.empty()
+
+
+async def test_boundary_requires_dispatched_scoped_identity_and_exact_what4(inspection):
+    receive(inspection, "*1001*4*0##")
+    dispatch(inspection)
+    for raw in ["*1001*4*0##", "*#1001*0*13*1##", "*#1001*24*13*1##", "*1001*4*0##",
+                "*#1001*0015*13*1##", "*#1001*0015*4*0*0*0*0*0*0##", "*1001*4*24##"]:
+        receive(inspection, raw)
+        assert inspection.session.settle_timer is None
+    # A description without the observed end boundary retains the original ceiling.
+    inspection.session.timer._run()
+    assert inspection.session.phase == "finished"
+
+
+async def test_trailing_diagnostics_restart_quiet_period_without_extending_deadline(inspection):
+    dispatch(inspection)
+    receive(inspection, "*#1001*0015*13*1##")
+    receive(inspection, "*1001*4*0##")
+    session = inspection.session
+    deadline, first = session.timer, session.settle_timer
+    receive(inspection, "*1*1*11##")
+    assert session.settle_timer is first  # Ordinary bus traffic is irrelevant.
+    receive(inspection, "*#1001*0015*30*1*6*0##")
+    second = session.settle_timer
+    assert first.cancelled() and second is not first
+    assert second.when() >= first.when() and session.timer is deadline
+    second._run()
+    assert session.modules[1]["object_id"] == 6
+    assert session.phase == "finished" and session.reason is None
+    count = len(session.frames)
+    receive(inspection, "*#1001*0015*30*2*6*0##")
+    assert len(session.frames) == count
+
+
+@pytest.mark.parametrize("outcome", ["cancel", "shutdown", "overlap", "ambiguous", "timeout"])
+async def test_quiet_period_cleanup_and_original_failure_protections(hass, inspection, outcome):
+    dispatch(inspection)
+    receive(inspection, "*#1001*0015*13*1##")
+    receive(inspection, "*1001*4*0##")
+    session = inspection.session
+    if outcome == "cancel":
+        session.close()
+    elif outcome == "shutdown":
+        hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+        await hass.async_block_till_done()
+    elif outcome == "overlap":
+        receive(inspection, "*#1001*24*0##", "tx")
+        assert session.reason == "overlapping_read"
+    elif outcome == "ambiguous":
+        receive(inspection, "*#1001*0015*13*2##")
+        assert session.reason == "ambiguous_identity" and session.hardware_id is None
+    else:
+        session.timer._run()
+    assert not session.active and session.timer.cancelled() and session.settle_timer.cancelled()
+    assert not hass.data[hw.DATA_KEY] and not inspection.monitor._subscribers
 
 
 @pytest.mark.parametrize(

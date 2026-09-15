@@ -1,6 +1,6 @@
 # MyHOME panel API: implemented reference
 
-Status: **implemented through panel 0.22.0**. The original profile contract was reviewed against
+Status: **implemented through panel 0.22.1**. The original profile contract was reviewed against
 [`02ce199`](https://github.com/xtimmy86x/MyHOME/tree/02ce19908787297c1a6e2a65d56a289e766c0695).
 Panel 0.10.0 adds a [guided-measurement session API](cover-calibration.md) and
 `calibration_busy` refusals on profile writes while a measurement is active. The
@@ -576,7 +576,13 @@ DIM1 signature; `firmware` is a V.R.B string. Unknown fields are null. Modules
 contain `slot`, nullable `object_id`, nullable `disabled`, raw nullable `flag` and
 nullable reported `address`. Frames contain only `raw` and `received_at`.
 
-Collection starts on the monitored TX of the queued request and lasts 20 seconds.
+Collection starts on the monitored TX of the queued request, with a 20-second
+maximum. From 0.22.1, exact RX `*1001*4*0##` after a valid scoped hardware ID arms
+a 0.5-second quiet timer. Subsequent retained WHO1001 RX restarts only that timer;
+it never extends the maximum deadline. Ordinary traffic does not postpone it.
+Early/mismatched boundary frames do not arm it. Normal quiet completion emits the
+same `finished` event with `reason: null`; it is not a completeness guarantee.
+Both timers are cancelled on every existing finish/close/error path.
 Only matching local A/PL dimensions are decoded; other/generic addresses remain
 raw with an unassociated count. Two distinct hardware IDs at the requested address
 clear decoded details and end the read. Results may be partial and are never saved

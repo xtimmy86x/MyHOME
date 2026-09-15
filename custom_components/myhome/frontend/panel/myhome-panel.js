@@ -116,7 +116,7 @@ class MyHomePanel extends HTMLElement {
   }
 
   _stop() {
-    this._hardware.close();
+    this._hardware.close(true);
     this._profileEditor.close();
     this._started = false;
     document.removeEventListener("visibilitychange", this._visibilityChanged);
@@ -380,7 +380,7 @@ class MyHomePanel extends HTMLElement {
       this._profileEditor.close(); this._removeMonitor();
       const gateway = this._data.gateways.find((item) => item.entry_id === this._entryId);
       this._hardware.open({ host: root.getElementById("hardware"), hass: this._hass,
-        entry_id: this._entryId, connected: !!gateway?.connected && gateway.state === "loaded" && !gateway.disabled_by,
+        entities: this._data.entities, entry_id: this._entryId, connected: !!gateway?.connected && gateway.state === "loaded" && !gateway.disabled_by,
         t: (key) => this._t(key) });
       return;
     }

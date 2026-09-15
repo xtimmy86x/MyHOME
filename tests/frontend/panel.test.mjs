@@ -28,7 +28,7 @@ const deferred = () => {
 function inventory() {
   return {
     version: "2.0.0b9",
-    panel_version: "0.21.0",
+    panel_version: "0.22.0",
     gateways: [
       { entry_id: "one", title: "Casa", mac: "00:03:50:00:00:01", model: "F454", host: "192.0.2.1", state: "loaded", connected: true, monitor_available: true },
       { entry_id: "two", title: "Garage", mac: "00:03:50:00:00:02", model: "F453", host: "192.0.2.2", state: "setup_retry", connected: false, monitor_available: false },
@@ -171,7 +171,7 @@ test("gateway, category and inherited area filters retain trigger-only and disab
 test("DOM search and gateway selection expose the expected devices and disabled entities", async () => {
   const { root } = await mount();
   assert.equal(root.querySelector('[data-view="entities"]').getAttribute("aria-pressed"), "true");
-  assert.equal(root.getElementById("panel-version").textContent, "Pannello v0.21.0");
+  assert.equal(root.getElementById("panel-version").textContent, "Pannello v0.22.0");
   assert.equal(root.getElementById("version").textContent, "Integrazione v2.0.0b9");
   root.querySelector('[data-view="entities"]').click();
   assert.equal(root.querySelectorAll(".device-group").length, 3);
@@ -1218,4 +1218,22 @@ test("hardware section requires a gateway and cancels on gateway or view navigat
   root.querySelector('[data-view="entities"]').click();
   assert.equal(root.querySelector("#hardware").hidden, true);
   panel.remove();
+});
+
+test("hardware inventory uses HA entities and survives panel tabs but ends with panel lifetime", async () => {
+  const { root, hass, panel } = await mount();
+  let callback;
+  hass.connection.subscribeMessage = async (cb) => { callback = cb; return () => {}; };
+  root.querySelector('[data-view="hardware"]').click(); change(root.querySelector("#gateway"), "one");
+  root.querySelector("#hw-read").click(); await tick();
+  callback({ entry_id: "one", where: "01", phase: "finished", reason: null, hardware_id: "009B5409", sequence: 1,
+    modules: [{ slot: 1, object_id: 6, address: "11" }], frames: [] });
+  assert.match(root.querySelector("#hw-inventory").textContent, /light.sala/);
+  assert.doesNotMatch(root.querySelector("#hw-inventory").textContent, /light.garage/);
+  root.querySelector('[data-view="entities"]').click(); root.querySelector('[data-view="hardware"]').click();
+  assert.equal(root.querySelectorAll(".hw-device").length, 1);
+  panel.hass = { ...hass, language: "en" };
+  assert.equal(root.querySelectorAll(".hw-device").length, 1);
+  assert.match(root.querySelector("#hardware").textContent, /Temporary hardware inventory/);
+  panel.remove(); assert.equal(panel._hardware.inventory.observations.size, 0);
 });

@@ -1,6 +1,6 @@
 # MyHOME panel API: implemented reference
 
-Status: **implemented through panel 0.21.0**. The original profile contract was reviewed against
+Status: **implemented through panel 0.22.0**. The original profile contract was reviewed against
 [`02ce199`](https://github.com/xtimmy86x/MyHOME/tree/02ce19908787297c1a6e2a65d56a289e766c0695).
 Panel 0.10.0 adds a [guided-measurement session API](cover-calibration.md) and
 `calibration_busy` refusals on profile writes while a measurement is active. The
@@ -593,3 +593,17 @@ resume, write, discovery scan or persistent hardware inventory API.
 
 See the [hardware inspection contract](hardware-inspection.md) for sources and
 scope limitations. Cover storage v4 and export v2 are unchanged.
+
+
+## Temporary hardware presentation (0.22.0)
+
+There is no new WebSocket endpoint or persistence schema. The panel combines
+successful terminal `myhome/hardware/inspect` events in a bounded display cache,
+keyed by config entry and normalized requested A/PL, grouped by hardware ID. It
+uses the existing panel inventory's `entities[].entry_id`, `who`, `address`, names
+and entity IDs for explicitly labeled candidate matches. No associations are
+written, and no status subscriptions or automatic diagnostic reads are added.
+
+The [temporary inventory contract](hardware-inspection.md#temporary-inventory-and-ha-candidates-0220)
+defines retention, the 100-observation global limit, changed-ID replacement,
+latest-description semantics, supported candidates and clear/unmount behavior.

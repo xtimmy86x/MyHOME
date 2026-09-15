@@ -1,4 +1,4 @@
-# Experimental WHO1001 hardware inspection — panel 0.21.0
+# Experimental WHO1001 hardware inspection — panel 0.22.0
 
 This first read-only view implements a small part of anotherjulien's proposal to
 inspect physical devices independently from normal WHO/WHERE entities. It reads
@@ -24,9 +24,16 @@ The protocol does not supply a request ID linking every response to a client.
 The backend detects another WHO1001 transmission through this gateway's monitor
 and ends its window; it cannot guarantee detection of an external client's read.
 
-This version has automated protocol/transport/UI verification. **Physical reading
-on the user's F454 is still pending.** The user's successful automatic-cover
-calibration tests concern WHO2 and do not validate this WHO1001 feature.
+**Physical WHO1001 check confirmed on the user's F454 (2026-09-15).** The user
+provided 13 frames from local address `01`, showing hardware ID `009B5409`
+(decimal `10179593`), firmware `1.1.0`, catalogue signature `107/6/1/1`, light
+actuator slots 1/2 (Object 6) at `24`/`01`, and light control slots 3/4 (Object 400)
+with no DIM32 address response. The user then reported the same result when
+reading A=2, PL=4. This validates this device's two addresses returning the same
+hardware ID; it does not establish universal module completeness or validate
+programming, routed buses or other device families. The second read was confirmed
+by the user; its full raw capture was not supplied. The 0.22 inventory UI still
+needs the next physical acceptance check described below.
 
 ## Exact transmitted request
 
@@ -66,7 +73,7 @@ capture evidence and a stronger selection/attribution model before handling that
 | DIM1 | Four raw catalogue identity values | Not a unique SKU/model; unknown field meanings are not invented |
 | DIM2 | V.R.B firmware components | Displayed exactly as received numeric values |
 | DIM30 | Internal slot, Object ID and raw flag | Flag 0/1 is interpreted as enabled/disabled from the dedicated DIM30 notes; other values remain unknown; slot numbering is not assumed to match the Suite GUI |
-| DIM32 | Address reported for that internal slot | No inferred WHO, destination address, HA registry link or assignment |
+| DIM32 | Address reported for that internal slot | No inferred WHO, destination address, confirmed HA registry link or assignment |
 | Other shapes/dimensions | Original frame and reception date | No speculative decoding or configuration interpretation |
 
 Recognized Object labels are limited to documented examples: 6 light actuator,
@@ -76,8 +83,9 @@ Recognized Object labels are limited to documented examples: 6 light actuator,
 
 A finished window means collection ended, **not that every module was received**.
 Missing firmware, identity or modules stay explicitly unknown. Results are
-transient, scoped to the current view and gateway, and are not a new source of
-configuration truth. Closing/reloading the view discards them. Retained timestamps
+transient, scoped to the panel instance and gateway, and are not a new source of
+configuration truth. Leaving/reloading the panel discards them; switching its
+sections preserves completed observations in the 0.22 temporary inventory. Retained timestamps
 refer to frame reception, not a guaranteed device configuration-change date.
 
 ## Sources and scope of the reverse-engineered model
@@ -100,3 +108,47 @@ Full discovery by hardware ID, selection of unconfigured devices, generic-WHERE
 attribution, additional diagnostic domains, DIM35 catalogue/firmware decoding and
 all programming operations remain future work. This iteration provides a concrete
 read path to test before expanding those capabilities.
+
+
+## Temporary inventory and HA candidates (0.22.0)
+
+A frontend display cache retains only terminal reads without a reason/error and
+with a valid nonzero hardware ID. It groups by **config entry + hardware ID**.
+It is not shared between browsers and never uses localStorage, sessionStorage,
+HA storage, profiles or registry writes. Starting an inspection remains the only
+operation sending a bus read. Inventory rendering and candidate lookup send none.
+
+- Keep the latest successful observation per gateway + normalized requested A/PL.
+  `01` and `0001` replace each other; `24` and `0024` are different addresses.
+  A successful reread with a different ID removes that address from the old ID's
+  group. Failed, cancelled, ambiguous or unidentified reads leave previous
+  observations intact, labeled with their previous completion date.
+- A hardware card lists explicitly interrogated addresses and uses the latest
+  retained read for firmware, modules, reported module addresses and raw frames.
+  It does not merge a missing current field with an old value. Differing retained
+  descriptions show a notice; all observations can still be partial.
+- At most 100 address observations are retained **across all gateways**. Replacing
+  a read renews its position; adding beyond the limit evicts the oldest address.
+- Changing gateway, internal section or panel language preserves this cache and
+  cancels any active collection. Leaving/reloading the panel or replacing the HA
+  connection discards it. Clear inventory affects only the selected gateway and
+  is disabled during a read. Other gateways remain isolated.
+- Candidate entities use the current backend-provided HA inventory: same config
+  entry, strictly local normalized address, and WHO 1 for Objects 6/8 or WHO 2 for
+  Object 218. Routed/private-riser addresses, unknown types and control modules
+  have no inferred matches. All matching entities are listed, including secondary
+  entities. Multiple matches are not reduced to an assumed primary entity.
+- Candidates are suggestions, not confirmed physical links. Names/removals update
+  with the normal panel inventory refresh; no live-state subscription is added.
+  Unknown module addresses remain unknown. HA devices are never regrouped in the
+  native registry by this view.
+
+### Next physical acceptance check
+
+Read `01`, then `24`, waiting for each observation window to finish. Expect one
+hardware card `009B5409` with both explicitly read addresses, the four modules in
+its latest details and possible HA entities for the two light actuator addresses
+when present in the selected gateway's inventory. Slots 3/4 may have no candidates.
+Switch to Entities and back: the card remains without another diagnostic request.
+Clear this gateway's inventory: the card disappears without a bus command. Reload
+the panel: no retained hardware inventory should reappear.

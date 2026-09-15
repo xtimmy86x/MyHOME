@@ -27,7 +27,7 @@ from .cover_profiles import register_api
 from .hardware_inspection import ws_inspect
 
 PANEL_URL = "myhome"
-PANEL_VERSION = "0.21.0"
+PANEL_VERSION = "0.22.0"
 PANEL_STATIC_URL = "/myhome_panel"
 WS_INVENTORY = "myhome/panel/inventory"
 _PANEL_REGISTERED = "_panel_registered"

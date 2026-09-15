@@ -15,6 +15,23 @@ The layout takes inspiration from ha-s7plc: a gateway overview, responsive card
 grid, category filters, and editing dialogs. It uses Home Assistant theme colors
 and provides English and Italian labels, with English fallback for other languages.
 
+## Temporary hardware inventory (0.22.0)
+
+Completed, identified reads now remain in a temporary inventory while this panel
+stays open. Reading `01` and `24` with the same hardware ID produces one card for
+that gateway. The card lists the addresses explicitly read and shows the latest
+observed modules, firmware and original frames. Differing descriptions are marked.
+
+Possible HA entities are listed for supported actuator module types using the
+same gateway, local address and compatible WHO. These are suggestions, with no
+registry assignments or configuration changes. Names follow the normal inventory
+refresh. Unknown module types and routed addresses have no inferred association.
+
+Switching sections/gateways preserves completed observations; leaving/reloading
+the panel clears them. **Clear this gateway’s inventory** removes only its retained
+reads. There is a shared limit of 100 address observations; the oldest is evicted
+when full. No automatic scan or new bus operation is introduced.
+
 ## Hardware inspection (0.21.0)
 
 Open **Hardware · experimental**, select a connected gateway and enter a known
@@ -27,7 +44,7 @@ remain explicit, with the original frames available for review.
 
 This first version supports one local address per read. It does not scan the bus,
 read detailed configuration, link physical modules to HA entities, or program
-hardware. Physical WHO1001 validation is pending. See the
+hardware. The user confirmed a physical F454 read on addresses `01` and `24` returning the same hardware ID. See the
 [hardware inspection guide](hardware-inspection.md) for the exact read request,
 attribution rules, protocol sources and F454 test procedure.
 
@@ -291,7 +308,7 @@ requirements, limits and real-gateway validation steps.
 
 ## Panel versioning
 
-The panel has an independent version, currently **0.21.0**, defined by
+The panel has an independent version, currently **0.22.0**, defined by
 `PANEL_VERSION` in `custom_components/myhome/panel.py`. Its version appears under
 the MyHOME header; the integration version is shown separately at the bottom.
 The label uses the version of the JavaScript module actually loaded by the tab.

@@ -430,3 +430,7 @@ button.danger-solid:hover { background: color-mix(in srgb, var(--panel-error) 85
 .batch-target small { display: block; }
 #cal-targets li { padding: 6px 0; overflow-wrap: anywhere; }
 #cal-batch-review { display: grid; gap: 12px; }
+
+.hw-modules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.hardware-section { overflow-wrap: anywhere; }
+.hw-frames { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; font-size: 12px; }

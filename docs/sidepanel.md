@@ -15,6 +15,22 @@ The layout takes inspiration from ha-s7plc: a gateway overview, responsive card
 grid, category filters, and editing dialogs. It uses Home Assistant theme colors
 and provides English and Italian labels, with English fallback for other languages.
 
+## Hardware inspection (0.21.0)
+
+Open **Hardware · experimental**, select a connected gateway and enter a known
+local A/PL. **Read device** sends one WHO1001 DIM0 description request and collects
+responses for 20 seconds. The view shows hardware ID, firmware, raw catalogue
+signature, internal modules/Object IDs and module addresses when received.
+Opening the view sends nothing. **End reading** or navigation cancels queued work
+and stops collection; results are transient. Unknown and unassociated responses
+remain explicit, with the original frames available for review.
+
+This first version supports one local address per read. It does not scan the bus,
+read detailed configuration, link physical modules to HA entities, or program
+hardware. Physical WHO1001 validation is pending. See the
+[hardware inspection guide](hardware-inspection.md) for the exact read request,
+attribution rules, protocol sources and F454 test procedure.
+
 ## Measure one direction (0.20.0)
 
 In **Travel profile**, select **Guided measurement**, then **Opening only** or
@@ -275,7 +291,7 @@ requirements, limits and real-gateway validation steps.
 
 ## Panel versioning
 
-The panel has an independent version, currently **0.20.0**, defined by
+The panel has an independent version, currently **0.21.0**, defined by
 `PANEL_VERSION` in `custom_components/myhome/panel.py`. Its version appears under
 the MyHOME header; the integration version is shown separately at the bottom.
 The label uses the version of the JavaScript module actually loaded by the tab.

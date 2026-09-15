@@ -1,6 +1,6 @@
 # MyHOME panel API: implemented reference
 
-Status: **implemented through panel 0.20.0**. The original profile contract was reviewed against
+Status: **implemented through panel 0.21.0**. The original profile contract was reviewed against
 [`02ce199`](https://github.com/xtimmy86x/MyHOME/tree/02ce19908787297c1a6e2a65d56a289e766c0695).
 Panel 0.10.0 adds a [guided-measurement session API](cover-calibration.md) and
 `calibration_busy` refusals on profile writes while a measurement is active. The
@@ -550,3 +550,46 @@ assigns a new profile with both times, preserving the opposite evidence exactly
 (including inherited origins or unknown metadata). Existing/shared profiles remain
 unchanged. Storage v4, export v2, revision/ownership checks, error handling and
 session cancellation semantics are unchanged. Unsaved values never enter export.
+
+
+## Read-only hardware inspection (0.21.0)
+
+Admin-only, explicit-gateway subscription:
+
+```json
+{"id":50,"type":"myhome/hardware/inspect","entry_id":"ENTRY","where":"0015"}
+```
+
+`where` accepts only an individual local A/PL encoded in two or four decimal
+digits, with a nonzero PL. Group/ambient/routed addresses and arbitrary frames
+are rejected. The handler validates the exact MyHOME config entry and connected
+runtime, permits one inspection per entry, and queues only `*#1001*WHERE*0##`.
+Acknowledgement uses HA's normal result envelope; subsequent events have this shape:
+
+```json
+{"entry_id":"ENTRY","where":"0015","sequence":2,"phase":"reading","reason":null,"read_only":true,"hardware_id":null,"identity":null,"firmware":null,"modules":[],"frames":[],"unassociated_frames":0}
+```
+
+Phases are `queued`, `reading` and `finished`. `sequence` increases on events.
+`hardware_id` is an eight-digit uppercase hex ID; `identity` is the raw four-value
+DIM1 signature; `firmware` is a V.R.B string. Unknown fields are null. Modules
+contain `slot`, nullable `object_id`, nullable `disabled`, raw nullable `flag` and
+nullable reported `address`. Frames contain only `raw` and `received_at`.
+
+Collection starts on the monitored TX of the queued request and lasts 20 seconds.
+Only matching local A/PL dimensions are decoded; other/generic addresses remain
+raw with an unassociated count. Two distinct hardware IDs at the requested address
+clear decoded details and end the read. Results may be partial and are never saved
+to configuration or HA registries. Limits: 10-second queue guard, 200 frames of
+up to 512 characters, and 64 module slots.
+
+Unsubscribe with HA's `unsubscribe_events` using the original request ID. Closing
+the socket cancels queued work and releases listeners/ownership; no extra bus
+command is sent. HA shutdown does the same. Terminal reason codes include
+`queue_timeout`, `overlapping_read`, `ambiguous_identity`, `frame_limit` and
+`module_limit`. Request refusals include `target_not_found`, `gateway_unavailable`,
+`inspection_busy`, `command_queue_full`, and standard schema errors. There is no
+resume, write, discovery scan or persistent hardware inventory API.
+
+See the [hardware inspection contract](hardware-inspection.md) for sources and
+scope limitations. Cover storage v4 and export v2 are unchanged.

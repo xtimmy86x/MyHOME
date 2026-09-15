@@ -5,10 +5,10 @@ const assetUrl = (name) => {
   url.search = new URL(import.meta.url).search;
   return url.href;
 };
-const [{ translations }, model, { escapeHtml, replacePreservingFocus }, { BusMonitorSection }, { CoverProfileEditor }] = await Promise.all([
+const [{ translations }, model, { escapeHtml, replacePreservingFocus }, { BusMonitorSection }, { CoverProfileEditor }, { HardwareSection }] = await Promise.all([
   import(assetUrl("panel-translations.js")), import(assetUrl("panel-model.js")),
   import(assetUrl("panel-dom.js")), import(assetUrl("panel-bus-monitor.js")),
-  import(assetUrl("panel-cover-profiles.js")),
+  import(assetUrl("panel-cover-profiles.js")), import(assetUrl("panel-hardware.js")),
 ]);
 const SETTINGS_URL = "/config/integrations/integration/myhome";
 const CATEGORY_VIEW_STORAGE_KEY = "myhome-panel-category-view-v1";
@@ -34,6 +34,7 @@ class MyHomePanel extends HTMLElement {
     this._unsubs = [];
     this._busMonitor = new BusMonitorSection();
     this._profileEditor = new CoverProfileEditor();
+    this._hardware = new HardwareSection();
     this._visibilityChanged = () => this._updatePolling();
     this._locationChanged = () => this._syncGatewayFromUrl();
   }
@@ -115,6 +116,7 @@ class MyHomePanel extends HTMLElement {
   }
 
   _stop() {
+    this._hardware.close();
     this._profileEditor.close();
     this._started = false;
     document.removeEventListener("visibilitychange", this._visibilityChanged);
@@ -204,6 +206,7 @@ class MyHomePanel extends HTMLElement {
   }
 
   _buildShell(preserveMonitor = false) {
+    this._hardware.close();
     this._profileEditor.close();
     const monitor = preserveMonitor ? this._busMonitor.view : null;
     const focused = monitor?.shadowRoot.activeElement;
@@ -224,7 +227,7 @@ class MyHomePanel extends HTMLElement {
         <div id="error" class="notice error" role="alert" hidden></div>
         <section id="gateways" class="gateway-grid" aria-label="${t("gateway")}"></section>
         <nav class="tabs" aria-label="MyHOME">
-          ${[["entities", "mdi:view-list-outline"], ["bus", "mdi:swap-horizontal"]].map(([view, icon]) => `<button data-view="${view}" aria-pressed="${view === this._view}"><ha-icon icon="${icon}" aria-hidden="true"></ha-icon>${t(view)} <span class="count" id="count-${view}" ${view === "bus" ? "hidden" : ""}></span></button>`).join("")}
+          ${[["entities", "mdi:view-list-outline"], ["hardware", "mdi:chip"], ["bus", "mdi:swap-horizontal"]].map(([view, icon]) => `<button data-view="${view}" aria-pressed="${view === this._view}"><ha-icon icon="${icon}" aria-hidden="true"></ha-icon>${t(view)} <span class="count" id="count-${view}" ${view !== "entities" ? "hidden" : ""}></span></button>`).join("")}
           <button data-action="refresh" class="ghost" title="${t("refresh")}" aria-label="${t("refresh")}"><ha-icon icon="mdi:refresh" aria-hidden="true"></ha-icon></button>
         </nav>
         <section id="who-navigation" class="who-navigation" hidden>
@@ -241,6 +244,7 @@ class MyHomePanel extends HTMLElement {
         <p class="notice muted" id="discovery-help">${t("discoveryHelp")}</p>
         <section id="items" class="who-groups"></section>
         <section id="monitor" hidden></section>
+        <section id="hardware" hidden></section>
         <p id="toast" class="muted" role="status"></p>
       </main><div id="dialog-host"></div>`;
     if (monitor) {
@@ -363,12 +367,23 @@ class MyHomePanel extends HTMLElement {
     if (!this._data) return;
     const root = this.shadowRoot;
     const isBus = this._view === "bus";
-    root.getElementById("who-navigation").hidden = isBus || !this._data.gateways.length;
+    const isHardware = this._view === "hardware";
+    root.getElementById("hardware").hidden = !isHardware;
+    if (!isHardware) this._hardware.close();
+    root.getElementById("who-navigation").hidden = isBus || isHardware || !this._data.gateways.length;
     for (const button of root.querySelectorAll("[data-view]")) button.setAttribute("aria-pressed", String(button.dataset.view === this._view));
-    root.getElementById("filters").hidden = isBus || !this._data.gateways.length;
-    root.getElementById("discovery-help").hidden = isBus || !this._data.gateways.length;
-    root.getElementById("items").hidden = isBus;
+    root.getElementById("filters").hidden = isBus || isHardware || !this._data.gateways.length;
+    root.getElementById("discovery-help").hidden = isBus || isHardware || !this._data.gateways.length;
+    root.getElementById("items").hidden = isBus || isHardware;
     root.getElementById("monitor").hidden = !isBus;
+    if (isHardware) {
+      this._profileEditor.close(); this._removeMonitor();
+      const gateway = this._data.gateways.find((item) => item.entry_id === this._entryId);
+      this._hardware.open({ host: root.getElementById("hardware"), hass: this._hass,
+        entry_id: this._entryId, connected: !!gateway?.connected && gateway.state === "loaded" && !gateway.disabled_by,
+        t: (key) => this._t(key) });
+      return;
+    }
     if (isBus) { this._profileEditor.close(); this._renderMonitor(); return; }
     this._removeMonitor();
     if (!this._data.gateways.length) {

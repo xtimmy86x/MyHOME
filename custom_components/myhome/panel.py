@@ -24,9 +24,10 @@ from homeassistant.helpers.storage import Store
 
 from .const import CONF_ENTITY, CONF_FIRMWARE, DOMAIN, INTEGRATION_VERSION, is_apl_address
 from .cover_profiles import register_api
+from .hardware_inspection import ws_inspect
 
 PANEL_URL = "myhome"
-PANEL_VERSION = "0.20.0"
+PANEL_VERSION = "0.21.0"
 PANEL_STATIC_URL = "/myhome_panel"
 WS_INVENTORY = "myhome/panel/inventory"
 _PANEL_REGISTERED = "_panel_registered"
@@ -264,6 +265,7 @@ async def async_setup_panel(hass: HomeAssistant, bus_card_url: str) -> None:
     data = hass.data.setdefault(DOMAIN, {})
     if not data.get(_WS_REGISTERED):
         websocket_api.async_register_command(hass, ws_panel_inventory)
+        websocket_api.async_register_command(hass, ws_inspect)
         register_api(hass)
         data[_WS_REGISTERED] = True
     if "frontend" not in hass.config.components or not getattr(hass, "http", None):

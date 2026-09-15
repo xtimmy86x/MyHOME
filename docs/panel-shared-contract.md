@@ -1,18 +1,18 @@
 # Shared MyHOME panel contract — proposal for review
 
-**Updated: 2026-09-15, panel 0.20.0. Shared contract: draft, not jointly approved
+**Updated: 2026-09-15, panel 0.21.0. Shared contract: draft, not jointly approved
 or implemented under the proposed common names.** Our panel already implements
 profiles, guided measurement, profile revision subscriptions, per-direction
 provenance, calibration export and optional single-cover and selected-cover automatic measurement, plus guided
-single-direction measurement; these are
+single-direction measurement, plus targeted read-only WHO1001 hardware inspection; these are
 documented in the [implemented API](panel-websocket-api.md) and
 [guided-calibration reference](cover-calibration.md).
 
 This document continues the existing source comparison; it does not restart the
 panel implementation or propose copying another fork wholesale. The original
 comparison used our panel 0.9.0 at `02ce199` and Interstellar0verdrive's fork at
-`229b1eb`. Our side is pinned to `9b839be` (panel 0.20.0); `9e96d6a` remains the
-preceding 0.19.0 implementation baseline.
+`229b1eb`. Our current side is panel 0.21.0 on `feat/myhome-sidepanel`; `9b839be` remains the
+preceding 0.20.0 implementation baseline.
 The branch also integrates `v2-phase1-architecture` through `db95d1f` (2026-09-15).
 The current extension retains the aligned base and its storage v4/export v2 contracts.
 The backend from
@@ -36,7 +36,7 @@ independent of opening the panel.
 
 | Implementation | Exact baseline | Relevant evidence |
 | --- | --- | --- |
-| Our `feat/myhome-sidepanel`, panel 0.20.0 | [`9b839be`](https://github.com/xtimmy86x/MyHOME/tree/9b839bedbbba05231557b7b0ba75a6ed7ea36e35) | [Implemented API](panel-websocket-api.md), `panel.py`, `cover_profiles.py`, `cover_profile_provenance.py`, `cover_profile_export.py`, `cover_calibration.py`, `cover_calibration_automatic.py`, `cover_calibration_batch.py`, `frontend/panel/` |
+| Our `feat/myhome-sidepanel`, panel 0.21.0 | Current implementation in this branch | [Implemented API](panel-websocket-api.md), `panel.py`, `cover_profiles.py`, `cover_profile_provenance.py`, `cover_profile_export.py`, `cover_calibration.py`, `cover_calibration_automatic.py`, `cover_calibration_batch.py`, `hardware_inspection.py`, `frontend/panel/` |
 | Integrated `v2-phase1-architecture` base | [`db95d1f`](https://github.com/xtimmy86x/MyHOME/tree/db95d1f349036229b2965341622cf0f2ed3859cc) | Restored actuator lock/unlock buttons with stale-registration filtering; safe entity IDs for names with apostrophes; F454 alarm replay and keepalive/reconnect regression tests |
 | Interstellar0verdrive's `MyHOME-stability`, `master` | [`229b1eb`](https://github.com/Interstellar0verdrive/MyHOME-stability/tree/229b1eb30558012674e1e7f5c2059a58300f09df) | [API reference](https://github.com/Interstellar0verdrive/MyHOME-stability/blob/229b1eb30558012674e1e7f5c2059a58300f09df/docs/panel-websocket-api.md), `websocket_api.py`, `panel_data.py`, `panel_write.py`, `panel_schemas.py`, `panel_src/` |
 | Upstream #349, backend only | [`e807e99`](https://github.com/OpenWebNet-HA/MyHOME/tree/e807e9986ca9e09e8f3c516bd9c5d8b55e076485) | [PR #349](https://github.com/OpenWebNet-HA/MyHOME/pull/349), `cover.py`, services, [runtime/service documentation](https://github.com/OpenWebNet-HA/MyHOME/blob/e807e9986ca9e09e8f3c516bd9c5d8b55e076485/docs/configuration/services.md) |
@@ -66,6 +66,7 @@ runtime. It is not simply a JSON-schema or documentation parity test.
 | 0.18.0 | Optional single-cover automatic open/close/open cycle in the existing socket session; bus feedback, one-second pauses, 59–65 s cutoff rejection, 180 s timeout; explicit review/Save; automatic provenance; storage v4 and export v2 |
 | 0.19.0 | Explicit selection of 1–20 covers in one gateway; sequential automatic cycles in one session; whole-group interruption; final review and one atomic new-profile/assignment save; storage v4/export v2 unchanged |
 | 0.20.0 | Optional guided opening-only or closing-only measurement from the assigned saved profile; retained opposite time/provenance; one leg then review; explicit new-copy save with shared session protections |
+| 0.21.0 | Explicit local A/PL WHO1001 DIM0 read in the Hardware section; transient ID/firmware/catalogue signature and DIM30/32 observations; raw evidence, strict address attribution, finite queue/read limits; no configuration or registry writes |
 
 The current profile model uses version-4 storage with opaque profile IDs,
 native unique-ID assignments and two linear directional times. Writes are
@@ -82,7 +83,7 @@ operation may still finish after the UI closes.
 
 ## Concrete differences
 
-| Area | Our panel 0.20.0 | Calibration fork at `229b1eb` | Proposed shared direction |
+| Area | Our panel 0.21.0 | Calibration fork at `229b1eb` | Proposed shared direction |
 | --- | --- | --- | --- |
 | Scope | Whole-installation inventory, primary header states, compact secondary entities, native monitor, profiles, guided/automatic measurement and export | Gateway overview with profile groups and detailed calibration | Keep the common shell; mount calibration as a section |
 | Gateway | Profile reads/writes require exact `entry_id`; inventory lists all | `overview` and `subscribe` allow omission and choose first loaded entry | Shell lists gateways; all module reads/writes/subscriptions use explicit entry |
@@ -113,7 +114,7 @@ panel branch. Its new card UI is separated into
 [draft #355](https://github.com/OpenWebNet-HA/MyHOME/pull/355), intended for panel
 integration rather than the next beta.
 
-| Concern | Our panel 0.20.0 | #349 at `e807e99` | Remaining shared-contract decision |
+| Concern | Our panel 0.21.0 | #349 at `e807e99` | Remaining shared-contract decision |
 | --- | --- | --- | --- |
 | Entry point | Experimental `myhome/cover_calibration/start` and `action` WebSockets, owned by one socket | `myhome.calibrate_cover`, native buttons, set/reset/stop operations | One backend session/controller with explicit ownership and cancellation semantics for both socket and service clients |
 | Completion | Guided endpoints remain operator-confirmed; optional automatic open/close/open completes each run on actuator stop, then requires review/Save | Automatic sequence: open to establish position, close and measure, open and measure; actuator stop ends each run | Define supported automatic/manual completion modes and their interruption rules |
@@ -236,6 +237,32 @@ export is a record of calibration data, not an HA backup or a migration adapter.
 Guided and automatic panel modes now share one session lifecycle and persistence
 path. Convergence with the upstream services/options store remains separate work
 and must retain these safety and revision guarantees.
+
+## Physical hardware inspection (implemented first slice, 0.21.0)
+
+This is the initial read path for anotherjulien's WHO1001 proposal in
+[discussion #270](https://github.com/orgs/OpenWebNet-HA/discussions/270#discussioncomment-18398814).
+An administrator selects one gateway and a known local A/PL in the Hardware view.
+Only `*#1001*WHERE*0##` is constructed; the existing guarded command queue and
+monitor collect the resulting device description. The operation has a 10-second
+queue deadline and a 20-second observation window, with one owner per entry.
+No request is sent merely by mounting the view. Unsubscription, navigation and
+shutdown invalidate queued work; an already transmitted read cannot be withdrawn.
+
+The view exposes hardware ID, firmware, raw DIM1 signature, DIM30 internal slots
+and Object IDs, and DIM32 addresses. It preserves unknown values and raw evidence.
+Only responses matching the requested local A/PL are decoded. Generic WHERE 0 or
+other/routed addresses stay unassociated; conflicting hardware IDs discard decoded
+details. The DIM30 flag interpretation is explicitly qualified. Results are
+bounded and transient, with no persistent inventory, registry grouping or copied
+configuration. Missing responses do not establish absence or read completeness.
+
+Full hardware discovery, unconfigured-device selection, generic-WHERE correlation,
+DIM35/catalogue decoding, WHO1004/1018 and all programming remain later work.
+The new local API is `myhome/hardware/inspect`; it is not an agreed shared upstream
+endpoint. The [hardware guide](hardware-inspection.md) records the exact payload,
+limits and wiki sources reviewed on 2026-09-15. Physical WHO1001 testing on the
+user's F454 remains pending and is separate from their successful WHO2 calibration.
 
 ## Shell/module boundary
 
@@ -478,23 +505,30 @@ assumed.
 Panel 0.20.0 extends the existing profile/calibration tests with both one-leg
 paths, retained manual/automatic/unknown evidence, shared-profile isolation,
 restart persistence, cancellation, storage errors and stale revisions.
-All **79 frontend tests passed**, including direction selection, endpoint
+Panel 0.21.0 adds 25 backend cases for the explicit WHO1001 read, strict address
+attribution, unknown/conflicting replies, queue limits, socket/shutdown cleanup,
+admin authorization and dispatch through the existing command worker. Hardware
+frontend cases cover explicit submission, cancellation, gateway changes, late
+subscription replies, retry and escaped raw evidence.
+All **83 frontend tests passed**, including direction selection, endpoint
 instructions and distinct measured/retained labels. Existing coverage includes explicit gateway selection,
 sequential targets, whole-group interruption, queue tokens, atomic failure cases,
 restart persistence and preservation of review names. It covers automatic run ordering, cutoff boundaries,
 missing start/stop feedback, cancellation during pauses/queued dispatch, shared
 ownership, persistence failure, source migration, UI confirmation and explicit Save.
-The full local suite passed **1,551 Python tests (1 skipped), with 100% line
+The full local suite passed **1,576 Python tests (1 skipped), with 100% line
 coverage** on the base aligned to `db95d1f`. Ruff and HA architectural checks
 passed. CI results are recorded with the implementation in the panel PR.
 These checks are not proof of interoperability with upstream services or of
 physical actuator feedback accuracy. The user confirmed the preceding 0.16.0
 provenance, 0.18.0 single-cover automatic and 0.19.0 selected-cover automatic
 behavior in their installation. Single-direction physical testing is pending.
+WHO1001 hardware inspection on a physical F454 is also pending; the confirmed
+WHO2 actuator tests do not validate this new diagnostics path.
 Real-browser visual validation and the guided-calibration reference's remaining
 physical-gateway/feedback cases retain their separate scope.
 
-This document accompanies the panel 0.20.0 single-direction implementation; storage
+This document accompanies the panel 0.21.0 hardware-inspection implementation; storage
 v4 and export v2 remain unchanged from 0.18.0.
 The calibration-fork assessment remains pinned to `229b1eb` and the #349 backend
 comparison to `e807e99`; neither external implementation was freshly audited for

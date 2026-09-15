@@ -41,6 +41,7 @@ from .const import (
     DOMAIN,
     LOGGER,
 )
+from .cover_profiles import bind_cover
 from .gateway import MyHOMEGatewayHandler
 from .myhome_device import MyHOMEEntity
 
@@ -278,6 +279,10 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
         self._full_where = f"{self._where}#4#{self._interface}" if self._interface is not None else self._where
         self._advanced = advanced
         self._travel_time = travel_time
+        self._closing_time = travel_time
+        self._default_travel_time = travel_time
+        self._pending_profile = None
+        self._calibration = None
 
         # Both advanced and standard covers support SET_POSITION (standard via travel time estimation)
         self._attr_supported_features = (
@@ -296,6 +301,8 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
             self._attr_extra_state_attributes["Int"] = self._interface
         if not self._advanced:
             self._attr_extra_state_attributes["travel_time"] = self._travel_time
+            self._attr_extra_state_attributes["opening_time"] = self._travel_time
+            self._attr_extra_state_attributes["closing_time"] = self._closing_time
 
         self._attr_current_cover_position = 50
         self._attr_is_opening = False
@@ -305,6 +312,30 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
         self._move_start_time = None
         self._start_position = 50
         self._stop_task = None
+
+    @callback
+    def async_apply_cover_profile(self, profile):
+        """Apply only when stopped, preserving the timing of an in-flight movement."""
+        if self._attr_is_opening or self._attr_is_closing or self._move_start_time is not None:
+            self._pending_profile = (profile,)
+            self._attr_extra_state_attributes["cover_profile_pending"] = True
+            return
+        self._pending_profile = None
+        self._travel_time = profile["opening_time"] if profile else self._default_travel_time
+        self._closing_time = profile["closing_time"] if profile else self._default_travel_time
+        self._attr_extra_state_attributes["opening_time"] = self._travel_time
+        self._attr_extra_state_attributes["closing_time"] = self._closing_time
+        self._attr_extra_state_attributes["travel_time"] = self._travel_time
+        self._attr_extra_state_attributes["cover_profile"] = profile["name"] if profile else None
+        self._attr_extra_state_attributes["cover_profile_pending"] = False
+
+    def _apply_pending_cover_profile(self):
+        if self._pending_profile is not None:
+            self.async_apply_cover_profile(self._pending_profile[0])
+
+    def _movement_travel_time(self):
+        """Use the current direction before snapshotting a stop or reversal."""
+        return self._closing_time if self._attr_is_closing else self._travel_time
 
     def _cancel_stop_task(self):
         """Cancel any running scheduled auto-stop task."""
@@ -319,7 +350,7 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
         """Return current cover position (interpolated if moving)."""
         if not self._advanced and self._move_start_time is not None:
             elapsed = time.monotonic() - self._move_start_time
-            delta = (elapsed / self._travel_time) * 100
+            delta = (elapsed / self._movement_travel_time()) * 100
             if self._attr_is_opening:
                 return min(100, int(round(self._start_position + delta)))
             if self._attr_is_closing:
@@ -347,6 +378,7 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
         """Run when entity about to be added to hass."""
         target_hass = self.hass or self._hass
         if target_hass is not None:
+            await bind_cover(target_hass, self)
             self.async_on_remove(
                 async_dispatcher_connect(
                     target_hass,
@@ -396,7 +428,15 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
     async def async_will_remove_from_hass(self):
         """Run when entity will be removed from hass."""
         self._cancel_stop_task()
+        if self._calibration:
+            self._calibration.close("cover_unavailable")
         await super().async_will_remove_from_hass()
+
+    @callback
+    def _handle_availability_update(self):
+        super()._handle_availability_update()
+        if self._calibration and not self.available:
+            self._calibration.interrupt("cover_unavailable")
 
     async def async_update(self):
         """Update the entity.
@@ -414,6 +454,8 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs):  # pylint: disable=unused-argument
         """Open the cover."""
+        if self._calibration:
+            self._calibration.interrupt("external_command")
         self._cancel_stop_task()
         if not self._advanced:
             self._start_position = self.current_cover_position if self.current_cover_position is not None else 0
@@ -427,6 +469,8 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
 
     async def async_close_cover(self, **kwargs):  # pylint: disable=unused-argument
         """Close cover."""
+        if self._calibration:
+            self._calibration.interrupt("external_command")
         self._cancel_stop_task()
         if not self._advanced:
             self._start_position = self.current_cover_position if self.current_cover_position is not None else 100
@@ -439,6 +483,8 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
 
     async def async_set_cover_position(self, **kwargs):
         """Move the cover to a specific position."""
+        if self._calibration:
+            self._calibration.interrupt("external_command")
         if ATTR_POSITION not in kwargs:
             return
         target_position = kwargs[ATTR_POSITION]
@@ -462,7 +508,7 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
             return
 
         travel_fraction = abs(diff) / 100.0
-        run_duration = travel_fraction * self._travel_time
+        run_duration = travel_fraction * (self._travel_time if diff > 0 else self._closing_time)
 
         if diff > 0:
             await self.async_open_cover()
@@ -485,11 +531,13 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
 
     async def async_stop_cover(self, **kwargs):  # pylint: disable=unused-argument
         """Stop the cover."""
+        if self._calibration:
+            self._calibration.interrupt("external_command")
         self._cancel_stop_task()
         if not self._advanced:
             if self._move_start_time is not None:
                 elapsed = time.monotonic() - self._move_start_time
-                delta = (elapsed / self._travel_time) * 100
+                delta = (elapsed / self._movement_travel_time()) * 100
                 if self._attr_is_opening:
                     self._attr_current_cover_position = min(100, int(round(self._start_position + delta)))
                 elif self._attr_is_closing:
@@ -501,6 +549,7 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
             if self._attr_current_cover_position is not None:
                 self._attr_is_closed = (self._attr_current_cover_position == 0)
         await self._gateway_handler.send(OWNAutomationCommand.stop_shutter(self._full_where))
+        self._apply_pending_cover_profile()
         if self.hass is not None:
             self.async_write_ha_state()
 
@@ -509,6 +558,8 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
         """Handle an event message."""
         if getattr(message, "is_translation", None) is True:
             return
+        if self._calibration:
+            self._calibration.on_event(message)
         LOGGER.debug(
             "%s %s",
             self._gateway_handler.log_id,
@@ -549,7 +600,7 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
             if not self._advanced:
                 if self._move_start_time is not None:
                     elapsed = time.monotonic() - self._move_start_time
-                    delta = (elapsed / self._travel_time) * 100
+                    delta = (elapsed / self._movement_travel_time()) * 100
                     if self._attr_is_opening:
                         self._attr_current_cover_position = min(100, int(round(self._start_position + delta)))
                     elif self._attr_is_closing:
@@ -563,4 +614,5 @@ class MyHOMECover(MyHOMEEntity, CoverEntity):
             elif self._attr_current_cover_position is not None:
                 self._attr_is_closed = (self._attr_current_cover_position == 0)
 
+        self._apply_pending_cover_profile()
         self._publish_state()

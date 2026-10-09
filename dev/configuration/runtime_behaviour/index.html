@@ -1484,6 +1484,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#entity-ids-after-a-device-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entity IDs after a device rename
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#broadcast-re-sync-group-area-general" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2077,6 +2088,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#entity-ids-after-a-device-rename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entity IDs after a device rename
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#broadcast-re-sync-group-area-general" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2244,6 +2266,41 @@
 <p>The WHO 16 status request is <code>*#16*WHERE*5##</code> (spec section 1.5.2). Gateways NACK the bare <code>*#16*0##</code> for every address, whether or not the plant has audio, so an old NACK on that frame never meant "no audio".</p>
 </blockquote>
 <hr />
+<h2 id="entity-ids-after-a-device-rename">Entity IDs after a device rename<a class="headerlink" href="#entity-ids-after-a-device-rename" title="Permanent link">&para;</a></h2>
+<p><strong>Update entity IDs when renaming a device</strong> is an optional gateway setting under
+<strong>Settings → Devices &amp; services → MyHOME → Configure</strong>. It is <strong>off by default</strong>,
+including on existing installations. Enabling it does not rename anything.</p>
+<p>Once enabled, changing a device's name in Home Assistant also updates its MyHOME
+entity IDs if they match the old device name plus the entity's original name,
+including a numeric collision suffix assigned by Home Assistant (<code>_2</code>, <code>_3</code>, etc.).
+For example, renaming <code>Kitchen</code> to <code>Dining room</code> changes <code>light.kitchen</code> to
+<code>light.dining_room</code> and <code>button.kitchen_lock</code> to <code>button.dining_room_lock</code>.
+Sensor names such as <code>power</code> and <code>energy</code> are preserved as suffixes. Disabled
+entities follow the same rules. Clearing a device name uses its integration name.
+Renaming <code>Light 01</code> to <code>Luce 2</code> also changes <code>light.light_01_2</code> to <code>light.luce_2</code>:
+the old collision suffix is dropped if the new ID is free.</p>
+<ul>
+<li>Existing IDs are never migrated at startup, reload, or upgrade. Changes in
+  <code>myhome.yaml</code>, discovery names, and devices renamed while unloaded do not trigger
+  a rename or a catch-up operation.</li>
+<li>Entities with a custom display name, a nonmatching ID, or the legacy naming model
+  are left alone. Arbitrary suffixes such as <code>_custom</code>, <code>_02</code> or <code>_2_custom</code> do not
+  qualify. An ID manually set to the exact default spelling (with or without a
+  standard collision suffix) is indistinguishable from an automatically generated ID.</li>
+<li>Occupied target IDs are skipped, including IDs of disabled entities and live
+  states without a registry entry. No existing entity is overwritten and no numeric
+  suffix is invented. Skipped collisions are reported in the Home Assistant log.</li>
+<li>Unique IDs, registry identity, areas, icons, enabled/disabled settings and other
+  customisations are preserved. Entities from another integration or gateway are
+  excluded, even on a shared device.</li>
+</ul>
+<p><strong>Enable this only when you want subsequent renames to change entity IDs.</strong> MyHOME
+does not rewrite references in automations, dashboards, YAML, templates or external
+clients. Review those references after renaming; a generated ID may already be in
+use there. Leave the option off to retain Home Assistant's usual stable-ID behavior.
+Disabling it stops future updates; it does not undo earlier renames.
+If a device was already renamed while its ID stayed unchanged, set its name back
+to the original name, save, then rename it again with this option enabled.</p>
 <h2 id="broadcast-re-sync-group-area-general">🔁 Broadcast re-sync (group / area / general)<a class="headerlink" href="#broadcast-re-sync-group-area-general" title="Permanent link">&para;</a></h2>
 <p>A group (<code>*1*x*#G##</code>), area (<code>*1*x*A##</code>) or general (<code>*1*x*0##</code>) command comes from a
 physical wall switch or scene, not from Home Assistant, so no single actuator's own

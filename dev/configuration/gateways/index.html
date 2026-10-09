@@ -2940,6 +2940,14 @@
 <td style="text-align: left;">Emits raw OpenWebNet bus frames onto the Home Assistant event bus as <code>myhome_message_event</code>.</td>
 </tr>
 <tr>
+<td style="text-align: left;"><strong>Update Entity IDs on Device Rename</strong></td>
+<td style="text-align: left;"><code>sync_entity_ids_on_device_rename</code></td>
+<td style="text-align: center;">Boolean</td>
+<td style="text-align: center;"><code>False</code></td>
+<td style="text-align: left;">All gateways</td>
+<td style="text-align: left;">Opt in to Core-generated IDs on future device renames. Preserves custom names and nonmatching IDs; references in automations, dashboards and YAML are not rewritten. See <a href="../runtime_behaviour/#entity-ids-after-a-device-rename">runtime behaviour</a>.</td>
+</tr>
+<tr>
 <td style="text-align: left;"><strong>Broadcast Re-sync</strong></td>
 <td style="text-align: left;"><code>broadcast_resync</code></td>
 <td style="text-align: center;">Boolean</td>

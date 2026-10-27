@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2282,7 +2282,7 @@
 <p>When your gateway connects to Home Assistant:</p>
 <ol>
 <li><strong>Dynamic Bus Discovery</strong>: The integration listens to OpenWebNet <code>WHO = 1</code> frames and scans active addresses.</li>
-<li><strong>Device &amp; Entity Creation</strong>: Each physical lighting actuator (<code>WHERE = 1..99</code> or area/point addresses <code>WHERE = 01..9999</code>) is registered as a Home Assistant <code>light</code> entity linked to the gateway device.</li>
+<li><strong>Device &amp; Entity Creation</strong>: Each physical lighting actuator (<code>WHERE = 1..99</code> or area/point addresses <code>WHERE = 01..9999</code>) is registered as a Home Assistant <code>light</code> entity linked to the gateway device. An area-0 point with PL 1..9 is addressed in two digits (<code>04</code> for A=0 PL=4): the gateways refuse the 4-digit spelling <code>0004</code> and report the point as <code>04</code>, so <code>where: "0004"</code> in <code>myhome.yaml</code> is resolved to <code>04</code> with a one-time warning, and an entity created under <code>0004</code> is moved to <code>04</code> at startup (#147). Other 4-digit addresses (<code>0015</code>, <code>0209</code>, <code>1015</code>) are used as typed.</li>
 <li><strong>UI Customization</strong>: Rename lights, assign them to Areas (e.g. <em>Kitchen</em>, <em>Living Room</em>), or customize icons directly in the Home Assistant UI (<strong>Settings → Devices &amp; Services → Entities</strong>).</li>
 </ol>
 <hr />
@@ -2350,7 +2350,7 @@
 </ul>
 <hr />
 <h3 id="synchronizing-physical-wall-switches-scs-group-buttons">Synchronizing Physical Wall Switches (SCS Group Buttons)<a class="headerlink" href="#synchronizing-physical-wall-switches-scs-group-buttons" title="Permanent link">&para;</a></h3>
-<p>If you have physical BTicino wall switches configured to trigger an SCS group (e.g. <code>WHERE = #1</code>), the integration automatically dispatches a bus event named <code>myhome_group_light_event</code> whenever group frames are intercepted on the SCS bus. You can keep your Home Assistant Light Group perfectly synchronized with a simple automation:</p>
+<p>If you have physical BTicino wall switches configured to trigger an SCS group (e.g. <code>WHERE = #1</code>), the integration automatically dispatches a bus event named <code>myhome_group_light_event</code> whenever a group frame with a state (<code>on</code> / <code>off</code>) is intercepted on the SCS bus; <code>myhome_area_light_event</code> and <code>myhome_general_light_event</code> do the same for an area and the general address. A relative dim step to the scope (<code>*1*30*#1##</code> / <code>*1*31*#1##</code>, also <code>*1*30#2#100*#1##</code>) fires no event, as it does not say whether the lights are on; it only triggers the member re-sync. The WHO 2 counterparts for shutters are described under <a href="../covers/#bus-events-for-scope-commands-myhome__automation_event">Bus Events for Scope Commands</a>. You can keep your Home Assistant Light Group perfectly synchronized with a simple automation:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">alias</span><span class="p">:</span><span class="w"> </span><span class="s">"Sync</span><span class="nv"> </span><span class="s">MyHOME</span><span class="nv"> </span><span class="s">Group</span><span class="nv"> </span><span class="s">1</span><span class="nv"> </span><span class="s">Wall</span><span class="nv"> </span><span class="s">Switch"</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">trigger</span><span class="p">:</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">event</span>
@@ -2443,10 +2443,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

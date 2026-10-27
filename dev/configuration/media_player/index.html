@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1310,6 +1310,78 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#amplifier-power-state-machine-bus-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Amplifier Power State Machine &amp; Bus Interaction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Amplifier Power State Machine &amp; Bus Interaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power States
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-transition-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Transition Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parked-group-cross-room-decoder-reassignment-music-assistant-pause-only-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parked Group &amp; Cross-Room Decoder Reassignment (Music Assistant Pause-Only UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bus-frame-decision-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bus Frame Decision Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#video-door-entry-intercom-ducking-sound-diffusion-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Video Door Entry (Intercom Ducking) &amp; Sound Diffusion Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2795,6 +2867,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#amplifier-power-state-machine-bus-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Amplifier Power State Machine &amp; Bus Interaction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Amplifier Power State Machine &amp; Bus Interaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#power-states" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power States
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-transition-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Transition Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parked-group-cross-room-decoder-reassignment-music-assistant-pause-only-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parked Group &amp; Cross-Room Decoder Reassignment (Music Assistant Pause-Only UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bus-frame-decision-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bus Frame Decision Engine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#video-door-entry-intercom-ducking-sound-diffusion-interaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Video Door Entry (Intercom Ducking) &amp; Sound Diffusion Interaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#openwebnet-who-16-reference-frames" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3207,12 +3351,15 @@ matrix routing to the wall panels.</p>
 </ol>
 <hr />
 <h2 id="gain-staging-bus-noise-elimination">🎛️ Gain Staging &amp; Bus Noise Elimination<a class="headerlink" href="#gain-staging-bus-noise-elimination" title="Permanent link">&para;</a></h2>
-<p>Analog SCS audio matrices can suffer from faint ground-loop hum or bus hiss if the input signal level is too low.</p>
-<p>The MyHOME integration features <strong>hardware gain staging</strong>:
-$$\text{Decoder Volume} = \text{Zone Volume} + \text{Pre-Gain Offset}$$</p>
+<p>Analog SCS audio matrices can suffer from faint ground-loop hum or bus hiss if the input signal level is too low and the room amplifiers have to be turned up to ~75% to reach normal listening volume.</p>
+<p>The MyHOME integration features <strong>fixed line-level hardware gain staging</strong>:
+$$\text{Decoder Volume} = \min(1.0,\; 0.75 + \text{Pre-Gain Offset})$$</p>
 <ul>
-<li>Setting <code>pre_gain</code> (e.g., <code>+10%</code> to <code>+20%</code>) drives the network streamer at maximum undistorted line level.</li>
-<li>The room amplifier then operates at lower amplification, pushing the analog noise floor below audibility.</li>
+<li>When <code>pre_gain</code> is <code>0</code> (<em>Pre-Amp OFF</em>), the backend decoder's volume is left untouched.</li>
+<li>Setting <code>pre_gain &gt; 0</code> (e.g., <code>+20%</code> → <code>95%</code> feed volume, or <code>+25%</code>–<code>+100%</code> → <code>100%</code> full line-level feed) drives the network streamer at a fixed high line-level feed as soon as playback starts, resumes, or a multi-room group is joined / handed over / unparked, independent of any individual room's volume slider.</li>
+<li>Once the backend decoder reports that target <code>volume_level</code> in Home Assistant, subsequent room volume adjustments skip redundant <code>media_player.volume_set</code> calls on the streamer unless its feed volume drifted.</li>
+<li>Room volume changes (<code>0</code>–<code>31</code> on the BTicino amplifier) control only the room's own speaker loudness and never throttle the shared streamer feed in multi-room groups. Conversely, changing the streamer's volume in a vendor app (e.g. Cambridge StreamMagic) does not move the Home Assistant room volume slider, which always reflects the BTicino amplifier on the SCS bus.</li>
+<li>Because the analog feed into the F441M matrix stays near full line level, each room amplifier operates at much lower gain (typically 20%–40% instead of 75%), pushing the 2-wire SCS bus noise floor well below audibility.</li>
 </ul>
 <h3 id="a-volume-of-0-is-not-a-mute">A volume of 0 is not a mute<a class="headerlink" href="#a-volume-of-0-is-not-a-mute" title="Permanent link">&para;</a></h3>
 <p>Turning a room down to 0, from Music Assistant or a wall panel, leaves it
@@ -3233,7 +3380,7 @@ room's amplifier still switches off.</p>
 <li><strong>Decoder mapping</strong>, one row per streaming decoder (up to 4):</li>
 <li><strong>Media player entity</strong>: your backend player (e.g. <code>media_player.squeezelite_salon</code>).</li>
 <li><strong>Source input</strong>: the F441M input it is wired to, chosen from a list that shows your source names (e.g. <code>S1 — Streamer</code>).</li>
-<li><strong>Pre-gain offset</strong>: percentage added to the decoder volume (0–100 %, e.g. <code>15</code>). See <a href="#gain-staging-bus-noise-elimination">Gain Staging</a>.</li>
+<li><strong>Pre-gain offset</strong>: percentage added to the 75% baseline decoder feed volume (0–100 %, e.g. <code>20</code> for 95% feed or <code>25</code>–<code>100</code> for 100% line-level feed; <code>0</code> = Pre-Amp OFF). See <a href="#gain-staging-bus-noise-elimination">Gain Staging</a>.</li>
 <li>A decoder that is paused from outside (for example a Spotify Connect session started on the device) and not held by one of your zones is left alone by <code>play_media</code> for <strong>5 minutes</strong>; after that it counts as free. This applies to the streaming companion of a two-entity decoder as well.</li>
 <li>Click <strong>Submit</strong>.</li>
 </ol>
@@ -3425,6 +3572,163 @@ and the decoder), so a report needs two files and one sentence:</p>
    slider would not move."</li>
 </ol>
 <p>Attach these to the issue instead of pasting log excerpts; two files are enough.</p>
+<h2 id="amplifier-power-state-machine-bus-interaction">⚡ Amplifier Power State Machine &amp; Bus Interaction<a class="headerlink" href="#amplifier-power-state-machine-bus-interaction" title="Permanent link">&para;</a></h2>
+<p>To ensure predictable behavior across diverse physical hardware (F441/F441M matrices, H4562/F502 amplifiers, L4561N source interfaces, and wall switches), the MyHOME integration centralizes all power-state decision logic into a dedicated state engine (<code>media_player_power.py</code>).</p>
+<h3 id="power-states">Power States<a class="headerlink" href="#power-states" title="Permanent link">&para;</a></h3>
+<p>The amplifier entity transitions between five distinct states:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">State</th>
+<th style="text-align: left;">Entity Status</th>
+<th style="text-align: left;">Hardware Stage</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>OFF</code></td>
+<td style="text-align: left;"><code>off</code></td>
+<td style="text-align: left;">Powered Off</td>
+<td style="text-align: left;">Amplifier output stage is unpowered (<code>*16*13*&lt;WHERE&gt;##</code>). Zero bus audio is demodulated. Standby power is minimal.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>WAKE_PENDING</code></td>
+<td style="text-align: left;"><code>off</code> / <code>on</code></td>
+<td style="text-align: left;">Powering Up</td>
+<td style="text-align: left;">Integration initiates an OFF → ON wake sequence (<code>*16*13*&lt;WHERE&gt;##</code> followed by <code>*16*3*&lt;WHERE&gt;##</code>). A 3-second echo suppression window (<code>WAKE_ECHO_WINDOW = 3.0s</code>) ignores the initial OFF echo.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>ON</code></td>
+<td style="text-align: left;"><code>playing</code> / <code>on</code></td>
+<td style="text-align: left;">Active</td>
+<td style="text-align: left;">Amplifier is powered ON (<code>*16*3*&lt;WHERE&gt;##</code>). Demodulating stereo audio and driving room speakers.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PENDING_OFF</code></td>
+<td style="text-align: left;"><code>paused</code> / <code>idle</code></td>
+<td style="text-align: left;">Active (Timer)</td>
+<td style="text-align: left;">Decoder has stopped or paused. A safety timer runs (3.0s for idle/off/standby, 60.0s for pause, or 5.0s group leave grace). If audio resumes before timer expiry, the timer cancels and playback continues without interruption.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>PARKED</code></td>
+<td style="text-align: left;"><code>paused</code> / <code>idle</code></td>
+<td style="text-align: left;">Powered Off</td>
+<td style="text-align: left;">Anti-hiss auto-off has powered off the hardware amplifier (<code>*16*13*&lt;WHERE&gt;##</code>) to eliminate analog bus hiss during extended pauses. In Home Assistant, the entity reports <code>paused</code>/<code>idle</code> and preserves group topology so Music Assistant keeps the sync group intact. Resumes immediately if playback restarts on the group, or yields the idle decoder and transitions cleanly to <code>OFF</code> (with zero bus frames) if another room starts a stream.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="state-transition-diagram">State Transition Diagram<a class="headerlink" href="#state-transition-diagram" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>stateDiagram-v2
+    [*] --&gt; OFF
+    OFF --&gt; WAKE_PENDING: play_media / turn_on
+    WAKE_PENDING --&gt; ON: *16*3*&lt;WHERE&gt;## confirmed
+    OFF --&gt; ON: Physical Vol-Up Rocker (*16*1001..1015*&lt;WHERE&gt;##)
+    OFF --&gt; ON: External Bus ON (*16*3*&lt;WHERE&gt;##)
+    ON --&gt; PENDING_OFF: Decoder Idle/Off (3s) or Paused (60s)
+    ON --&gt; PENDING_OFF: Member Unjoined (5s grace period)
+    PENDING_OFF --&gt; ON: Decoder resumes playing (Timer Cancelled)
+    PENDING_OFF --&gt; OFF: Another room claims paused/idle decoder (&lt; 60s, Amp OFF after 5s grace)
+    PENDING_OFF --&gt; PARKED: Auto-Off Timer Expires (Group Preserved, Amp OFF)
+    PENDING_OFF --&gt; OFF: Grace Period Expires (Standalone / Unjoined)
+    PARKED --&gt; ON: Same group resumes (media_play / play_media / turn_on)
+    PARKED --&gt; OFF: Another room claims idle decoder (&gt;= 60s, Group Dissolved, No Bus Frame)
+    PARKED --&gt; OFF: turn_off / Physical Wall Switch OFF (*16*13*&lt;WHERE&gt;##)
+    ON --&gt; OFF: turn_off / Physical Wall Switch OFF (*16*13*&lt;WHERE&gt;##)</code></pre>
+<h3 id="parked-group-cross-room-decoder-reassignment-music-assistant-pause-only-ui">Parked Group &amp; Cross-Room Decoder Reassignment (Music Assistant Pause-Only UI)<a class="headerlink" href="#parked-group-cross-room-decoder-reassignment-music-assistant-pause-only-ui" title="Permanent link">&para;</a></h3>
+<p>Music Assistant's player UI only offers <strong>Play / Pause</strong> (it has <strong>no Stop button</strong>). When a listener finishes playing music in a multiroom group (<code>Room A</code>, e.g. <code>zone_17</code> + <code>zone_18</code>) and presses <strong>Pause</strong>, the rooms first enter <code>PENDING_OFF</code> (<code>0–60s</code> while the 60-second anti-hiss pause timer runs and physical amplifiers remain ON) and then enter <code>PARKED</code> (<code>≥ 60s</code>, after anti-hiss auto-off sends <code>*16*13*&lt;WHERE&gt;##</code> to power down the physical amplifiers while reporting <code>paused</code> / <code>idle</code> in Home Assistant so Music Assistant does not tear down the sync group).</p>
+<p>Because the decoder is paused or idle under a MyHOME room's ownership, it remains <strong>soft-held</strong> and can be reclaimed immediately in both windows (the 5-minute <code>PAUSE_TAKEOVER_AFTER</code> lock only protects <strong>unassigned</strong> decoders paused by an external non-MyHOME session such as Spotify Connect started directly on the hardware streamer):</p>
+<ul>
+<li><strong>Same group resumes</strong>: Calling <code>media_play</code>, <code>play_media</code>, or <code>turn_on</code> on <code>Room A</code> cancels the timer (if <code>&lt; 60s</code>) or wakes its parked amplifiers (<code>*16*13*&lt;WHERE&gt;##</code> → <code>*16*3*&lt;WHERE&gt;##</code> if <code>≥ 60s</code>) and resumes playback on the same decoder.</li>
+<li><strong>Another room starts playback <code>&lt; 60s</code> after pause (<code>PENDING_OFF</code> takeover)</strong>: If <code>Room B</code> (<code>zone_36</code>) starts playback before the 60-second anti-hiss timer fires, <code>DecoderPool.claim()</code> immediately reassigns the paused/idle decoder to <code>Room B</code> and records the displaced group (<code>zone_17</code> + <code>zone_18</code>). <code>_reconcile_pool_loss()</code> clears <code>_active_decoder</code> and cancels the 60-second timer on <code>Room A</code>, prevents <code>Room A</code> from passively mirroring or auto-joining <code>Room B</code>'s stream, and schedules the 5-second delayed-off grace timer so <code>zone_17</code> and <code>zone_18</code> send <code>*16*13*&lt;WHERE&gt;##</code> and power off their physical amplifiers cleanly.</li>
+<li><strong>Another room starts playback <code>≥ 60s</code> after pause (<code>PARKED</code> takeover)</strong>: Once <code>Room A</code> is parked (<code>_parked = True</code>, physical amplifiers already OFF), <code>DecoderPool.claim()</code> immediately reassigns the decoder to <code>Room B</code>, dissolves the parked group in the pool, and reconciles the displaced rooms (<code>_parked = False</code>, <code>_active_decoder = None</code>, HA state <code>off</code>) with <strong>zero bus frames</strong> sent to amplifiers that are already physically powered off.</li>
+</ul>
+<pre class="mermaid"><code>stateDiagram-v2
+    state "ON (playing) — Amp ON, HA playing, holds decoder_1" as A_ON
+    state "PENDING_OFF (0–60s after MA Pause) — Amp ON, HA paused/idle, 60s timer" as A_PENDING
+    state "PARKED (&gt;= 60s Soft-Hold) — Amp OFF (*16*13*17/18##), HA idle/paused, group kept" as A_PARKED
+    state "OFF (Displaced &lt; 60s) — Amp OFF (*16*13*17/18## after 5s grace), HA off, group dissolved" as A_OFF_ACTIVE
+    state "OFF (Displaced &gt;= 60s) — Amp already OFF (0 bus frames), HA off, group dissolved" as A_OFF_PARKED
+
+    [*] --&gt; A_ON
+    A_ON --&gt; A_PENDING: User presses Pause in Music Assistant (no Stop button)
+    A_PENDING --&gt; A_ON: Same group resumes (&lt; 60s, timer cancelled)
+    A_PENDING --&gt; A_OFF_ACTIVE: Room B (Zone 36) plays (&lt; 60s, claims decoder_1)
+    A_PENDING --&gt; A_PARKED: 60s anti-hiss timer fires
+    A_PARKED --&gt; A_ON: Same group resumes (wakes 17 &amp; 18)
+    A_PARKED --&gt; A_OFF_PARKED: Room B (Zone 36) plays (&gt;= 60s, claims decoder_1)</code></pre>
+<h3 id="bus-frame-decision-engine">Bus Frame Decision Engine<a class="headerlink" href="#bus-frame-decision-engine" title="Permanent link">&para;</a></h3>
+<p>Every OpenWebNet frame received on the SCS bus is evaluated against the pure decision function <code>determine_power_transition(...)</code>. The engine maps frame types to transitions:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Frame Pattern</th>
+<th style="text-align: left;">Description</th>
+<th style="text-align: left;">Power Transition</th>
+<th style="text-align: left;">Handling &amp; Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>*16*3*&lt;WHERE&gt;##</code><br><code>*16*0*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;">Amplifier ON (stereo / mono)</td>
+<td style="text-align: left;"><code>PowerTransition.WAKE_ON</code></td>
+<td style="text-align: left;">Powers the amplifier ON; cancels any pending auto-off or grace timers.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*16*1001*&lt;WHERE&gt;##</code><br>to <code>*16*1015*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;">Wall switch Volume-UP rocker (+1 to +15)</td>
+<td style="text-align: left;"><code>PowerTransition.WAKE_ON</code></td>
+<td style="text-align: left;">Physical volume-up rocker intentionally wakes and turns ON the amplifier (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/579">#579</a>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*16*1101*&lt;WHERE&gt;##</code><br>to <code>*16*1115*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;">Wall switch Volume-DOWN rocker (−1 to −15)</td>
+<td style="text-align: left;"><code>PowerTransition.NO_CHANGE</code></td>
+<td style="text-align: left;">Steps volume down only. Never powers on an inactive amplifier.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*#16*&lt;WHERE&gt;*1*&lt;LEVEL&gt;##</code><br><code>*#22*3#A#P*1*&lt;LEVEL&gt;##</code></td>
+<td style="text-align: left;">Dimension 1 volume status report (0–31)</td>
+<td style="text-align: left;"><code>PowerTransition.NO_CHANGE</code></td>
+<td style="text-align: left;"><strong>CRITICAL</strong>: Updates <code>volume_level</code> only. Never wakes or turns on an OFF amplifier (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/669">#669</a>, <a href="https://github.com/OpenWebNet-HA/MyHOME/issues/682">#682</a>).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*#16*&lt;WHERE&gt;*#1*&lt;LEVEL&gt;##</code></td>
+<td style="text-align: left;">Dimension #1 volume set command</td>
+<td style="text-align: left;"><code>PowerTransition.NO_CHANGE</code></td>
+<td style="text-align: left;">Writes target volume level. Does not alter amplifier power state.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*16*3*1ES##</code></td>
+<td style="text-align: left;">Matrix environment routing frame</td>
+<td style="text-align: left;"><code>PowerTransition.NO_CHANGE</code></td>
+<td style="text-align: left;">Routes environment <code>E</code> to source <code>S</code>. Handled by routing logic; does not change power state.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*16*3*10S##</code></td>
+<td style="text-align: left;">Source device activation frame</td>
+<td style="text-align: left;"><code>PowerTransition.NO_CHANGE</code></td>
+<td style="text-align: left;">Toggles source hardware <code>S</code>. Does not alter room amplifier power.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*16*13*&lt;WHERE&gt;##</code><br><code>*16*10*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;">Amplifier OFF (stereo / mono)</td>
+<td style="text-align: left;"><code>PowerTransition.WAKE_ECHO_OFF</code><br><code>PowerTransition.PARKED_CONFIRM_OFF</code><br><code>PowerTransition.REAL_OFF</code></td>
+<td style="text-align: left;">• If within 3.0s of wake: ignored as self-echo.<br>• If amplifier is parked: acknowledged as auto-off echo.<br>• Otherwise: real OFF from wall switch or gateway; powers off entity and disbands group.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="video-door-entry-intercom-ducking-sound-diffusion-interaction">Video Door Entry (Intercom Ducking) &amp; Sound Diffusion Interaction<a class="headerlink" href="#video-door-entry-intercom-ducking-sound-diffusion-interaction" title="Permanent link">&para;</a></h3>
+<p>In installations equipped with both BTicino Sound Diffusion (F441/F441M, WHO = 16 / WHO = 22) and 2-Wire Video Door Entry / Intercom systems (e.g. Classe 100/300 internal units, 344612, entrance panels):</p>
+<ol>
+<li><strong>Hardware Intercom Ducking</strong>: When an incoming door call or intercom conversation begins, the video door entry system or audio matrix hardware performs automatic <strong>hardware audio ducking</strong> or line muting so that door chimes and speech remain clearly audible over background music.</li>
+<li><strong>Dimension 1 Status Broadcasts</strong>: To synchronize volume levels during ducking, the gateway or matrix broadcasts OpenWebNet Dimension 1 volume status reports (<code>*#16*&lt;WHERE&gt;*1*&lt;vol&gt;##</code> and WHO 22 mirrors <code>*#22*3#A#P*1*&lt;vol&gt;##</code>) across the SCS bus. During the call, volume is lowered (e.g., to 0 or a low ducked level). When the intercom call terminates, the hardware broadcasts restoration Dimension 1 reports restoring previous volume levels (e.g., back to 10 or 15).</li>
+<li><strong>Prevention of False Wake-Ups (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/669">#669</a>)</strong>: Unpowered room amplifiers retain their hardware volume registers in non-volatile memory and receive these broadcast ducking/restoration frames even while switched OFF. Prior to <a href="https://github.com/OpenWebNet-HA/MyHOME/issues/682">#682</a>, loosely coupled status checks could interpret volume updates as an indication that the amplifier was active, causing unpowered amplifiers throughout the house to falsely power ON whenever the doorbell rang.</li>
+<li><strong>Guaranteed Decoupling</strong>: With <code>determine_power_transition(...)</code>, Dimension 1 status reports are strictly classified as <code>PowerTransition.NO_CHANGE</code>. Inactive amplifiers stay OFF throughout the intercom call, active amplifiers duck and restore seamlessly, and volume state remains perfectly synchronized.</li>
+<li><strong>Golden Trace Verification</strong>: Validated against an authentic 30-frame MH202 bus capture (<code>myhome_trace_MH202_sound_intercom_ducking.json</code>) in <code>tests/test_intercom_ducking_trace_replay.py</code>.</li>
+</ol>
+<hr />
 <h2 id="openwebnet-who-16-reference-frames">📜 OpenWebNet WHO = 16 Reference Frames<a class="headerlink" href="#openwebnet-who-16-reference-frames" title="Permanent link">&para;</a></h2>
 <p><code>&lt;WHERE&gt;</code> is an amplifier (<code>01</code>–<code>99</code>), an environment (<code>#0</code>–<code>#9</code>) or <code>0</code> for
 all amplifiers. The integration addresses individual amplifiers.</p>
@@ -3551,10 +3855,10 @@ specification does not define; OWNd 2.0.0b9 sends <code>*16*1101*&lt;WHERE&gt;##
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

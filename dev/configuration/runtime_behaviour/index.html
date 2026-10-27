@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1481,16 +1481,22 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entity-ids-after-a-device-rename" class="md-nav__link">
+    <nav class="md-nav" aria-label="🔌 Startup discovery is gated by the gateway profile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#day-0-blank-start-discovery-matrix-auto-discovered-vs-manual-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Entity IDs after a device rename
+        Day 0 Blank-Start Discovery Matrix (Auto-discovered vs Manual Configuration)
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2085,16 +2091,22 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entity-ids-after-a-device-rename" class="md-nav__link">
+    <nav class="md-nav" aria-label="🔌 Startup discovery is gated by the gateway profile">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#day-0-blank-start-discovery-matrix-auto-discovered-vs-manual-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Entity IDs after a device rename
+        Day 0 Blank-Start Discovery Matrix (Auto-discovered vs Manual Configuration)
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2238,76 +2250,116 @@
 <tr>
 <th style="text-align: left;">Frame</th>
 <th style="text-align: left;">Subsystem</th>
+<th style="text-align: left;">Supported Gateways</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td style="text-align: left;"><code>*#1*0##</code></td>
 <td style="text-align: left;">Lighting</td>
+<td style="text-align: left;">All gateways</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>*#2*0##</code></td>
 <td style="text-align: left;">Automation / covers</td>
+<td style="text-align: left;">All gateways</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>*#4*0##</code></td>
 <td style="text-align: left;">Thermoregulation</td>
+<td style="text-align: left;">All gateways except F450, F454, F459, F460, F461, H4684, MH200, MH201, MH202 and MyHomeServer1, whose firmware drops it (firmware oracle; the MH201 from a physical sweep trace, <code>tests/fixtures/traces/issue_466</code>); F460, F461 and MyHomeServer1 poll <code>*#4*&lt;WHERE&gt;##</code> per zone instead, and the zones of the SCS-only models (F450, F454, F459, H4684, MH200, MH201, MH202) ask <code>*#4*&lt;WHERE&gt;*0##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*#5*0##</code></td>
+<td style="text-align: left;">Burglar alarm</td>
+<td style="text-align: left;">MH202, H4890</td>
 </tr>
 <tr>
 <td style="text-align: left;"><code>*#16*0*5##</code></td>
 <td style="text-align: left;">Sound system (dimension 5; lists every amplifier)</td>
+<td style="text-align: left;">Gateways whose profile advertises WHO 16, except F450, F459, F460, F461, MH202 and MyHomeServer1, whose firmware drops it (firmware oracle)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*#18*51*51##</code></td>
+<td style="text-align: left;">Energy management (meter 51 total energy)</td>
+<td style="text-align: left;">F454, F455, MH201, MH202, MyHomeServer1, H4890</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>*#18*51*113##</code></td>
+<td style="text-align: left;">Energy management (meter 51 active power)</td>
+<td style="text-align: left;">F454, F455, MH201, MH202, MyHomeServer1, H4890</td>
 </tr>
 </tbody>
 </table>
 <p>Each request is only sent when the gateway's OWNd <strong>profile</strong> advertises that WHO (<code>GatewayProfile.supported_who</code>). Unknown gateways keep the full set.</p>
-<p>The requests go out one at a time. The gateway ACKs a general request at once, but the replies (one frame per device, on the event session) keep coming for seconds on a large plant, and a second request sent in that window cuts the first reply short (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/578">#578</a>). So after each request is written, the next one waits until the event session has been quiet for 0.75 s, at most 15 s. A request that is NACKed or never written still gets that wait. <code>myhome.sweep_bus</code> paces its general requests the same way, so a sweep on a large plant takes a few seconds per subsystem. Entities restored at startup poll their own state only after the whole sweep has finished.</p>
+<p>The requests go out one at a time. The gateway ACKs a general request at once, but the replies (one frame per device, on the event session) keep coming for seconds on a large plant, and a second request sent in that window cuts the first reply short (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/578">#578</a>). So after each request is written, the next one waits until the event session has been quiet for 0.75 s, at most 15 s. A request that is NACKed or never written still gets that wait. <code>myhome.sweep_bus</code> paces its general requests the same way and, unless called with <code>force: true</code>, leaves out the ones the firmware drops just like the startup sweep, so a sweep on a large plant takes a few seconds per subsystem. Entities restored at startup poll their own state only after the whole sweep has finished.</p>
 <blockquote>
 <p>OWNd 2.0.0b8 and earlier give an <strong>MH200</strong> the MH200N profile, which does not advertise WHO 16, so amplifiers behind an MH200 only appear once they send bus traffic. A live MH200 answers <code>*#16*0*5##</code> with every amplifier and source; <a href="https://github.com/OpenWebNet-HA/OWNd/issues/53">OWNd#53</a> gives it its own profile.</p>
 <p>The WHO 16 status request is <code>*#16*WHERE*5##</code> (spec section 1.5.2). Gateways NACK the bare <code>*#16*0##</code> for every address, whether or not the plant has audio, so an old NACK on that frame never meant "no audio".</p>
 </blockquote>
+<h3 id="day-0-blank-start-discovery-matrix-auto-discovered-vs-manual-configuration">Day 0 Blank-Start Discovery Matrix (Auto-discovered vs Manual Configuration)<a class="headerlink" href="#day-0-blank-start-discovery-matrix-auto-discovered-vs-manual-configuration" title="Permanent link">&para;</a></h3>
+<p>On a fresh installation with no <code>myhome.yaml</code> file (Day 0 blank start), the integration automatically queries and hydrates standard residential hardware subsystems according to gateway capabilities:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Subsystem / Feature</th>
+<th style="text-align: center;">Auto-Discovered on Blank Start</th>
+<th style="text-align: center;">Requires <code>myhome.yaml</code> or UI Configuration</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Lighting (WHO 1)</strong></td>
+<td style="text-align: center;">✅ Yes (<code>*#1*0##</code>)</td>
+<td style="text-align: center;">Optional (custom names / classes)</td>
+<td style="text-align: left;">Point-to-point lights (<code>11</code>–<code>99</code>) and routed addresses. Area/general broadcasts (<code>WHERE="0"</code> / <code>"00"</code>) do not create entities.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Automation / Covers (WHO 2)</strong></td>
+<td style="text-align: center;">✅ Yes (<code>*#2*0##</code>)</td>
+<td style="text-align: center;">Optional (<code>travel_time</code>, general cover)</td>
+<td style="text-align: left;">Point-to-point standard covers. Venetian tilt and impulse mode require manual configuration.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thermoregulation (WHO 4)</strong></td>
+<td style="text-align: center;">✅ Yes (<code>*#4*0##</code>), per gateway</td>
+<td style="text-align: center;">Optional (<code>cooling</code>, <code>fan</code>)</td>
+<td style="text-align: left;">Standard zones (<code>1</code>–<code>99</code>) and central units (<code>#0</code>, <code>#0#1</code>). Area broadcasts (<code>00</code>) and probe broadcasts do not create climate entities. On F450, F454, F459, F460, F461, H4684, MH200, MH201, MH202 and MyHomeServer1 the firmware drops <code>*#4*0##</code> (see the table above), so with no registry entry and no <code>myhome.yaml</code> a zone is discovered from its first bus frame rather than by the startup sweep.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Burglar Alarm (WHO 5)</strong></td>
+<td style="text-align: center;">✅ Yes (<code>*#5*0##</code>)</td>
+<td style="text-align: center;">Optional</td>
+<td style="text-align: left;">Discovered on supported gateways (MH202, H4890). Panel tracks the central unit.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sound System (WHO 16)</strong></td>
+<td style="text-align: center;">✅ Yes (<code>*#16*0*5##</code>), per gateway</td>
+<td style="text-align: center;">Optional (streamer mapping)</td>
+<td style="text-align: left;">Discovers all amplifier zones and sources via dimension 5 query where the profile advertises WHO 16. On F450, F459, F460, F461, MH202 and MyHomeServer1 the firmware drops <code>*#16*0*5##</code>, so amplifiers there are discovered from their first bus frame.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Energy Management (WHO 18)</strong></td>
+<td style="text-align: center;">✅ First Meter 51 only</td>
+<td style="text-align: center;">Secondary meters (<code>52</code>–<code>59</code>)</td>
+<td style="text-align: left;">Factory default residential meter <code>51</code> is queried at startup for power and total energy. Secondary meters are discovered dynamically upon bus emission or via <code>myhome.sweep_bus</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Control (WHO 15 / 25)</strong></td>
+<td style="text-align: center;">❌ Stateless</td>
+<td style="text-align: center;">N/A (Device Triggers / Events)</td>
+<td style="text-align: left;">Pushbuttons emit events and device triggers; no entities are created.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Light Groups (<code>where: '#G'</code>)</strong></td>
+<td style="text-align: center;">❌ Bus limitation</td>
+<td style="text-align: center;">Required (<code>members: [...]</code>)</td>
+<td style="text-align: left;">OpenWebNet groups have no bus membership read-back command.</td>
+</tr>
+</tbody>
+</table>
 <hr />
-<h2 id="entity-ids-after-a-device-rename">Entity IDs after a device rename<a class="headerlink" href="#entity-ids-after-a-device-rename" title="Permanent link">&para;</a></h2>
-<p><strong>Update entity IDs when renaming a device</strong> is an optional gateway setting under
-<strong>Settings → Devices &amp; services → MyHOME → Configure</strong>. It is <strong>off by default</strong>,
-including on existing installations. Enabling it does not rename anything.</p>
-<p>When enabled, future device renames from Home Assistant's device page update
-eligible entity IDs using Home Assistant's <code>async_regenerate_entity_id</code> API, the
-same generator used by the native <strong>Recreate entity IDs</strong> action. Core handles
-canonical entity names, area prefixes, configured naming parts and collisions.
-For example, <code>Kitchen</code> → <code>Dining room</code> changes <code>light.kitchen</code> to
-<code>light.dining_room</code>. With an area prefix, <code>light.ground_floor_kitchen</code> becomes
-<code>light.ground_floor_dining_room</code>. A button whose canonical ID base is <code>Lock</code> keeps the <code>_lock</code> suffix even
-when its display name is translated as <code>Blocca</code>. If Core instead selects native
-Italian IDs, its <code>_blocca</code> suffix is preserved. Disabled entities follow the same rules; clearing
-a device name uses its integration name.</p>
-<ul>
-<li>MyHOME remembers which IDs match Core's automatic generator before a rename.
-  Entities with a custom display name, a nonmatching ID or the legacy naming
-  model are left alone. Manual ID changes refresh eligibility. An ID manually set
-  to exactly the value Core would generate is indistinguishable from an automatic
-  ID; Home Assistant does not record that distinction.</li>
-<li>Core chooses an available ID, including a numeric suffix when necessary. IDs
-  belonging to registered entities (including disabled ones) or live states are
-  never overwritten. For example, <code>light.light_01_2</code> can become <code>light.luce_2</code> if
-  <code>light.light_01</code> is occupied before the rename and the new ID is free. If lower
-  collision numbers have become free before eligibility is checked, the old
-  suffixed ID no longer matches Core's generator and is conservatively preserved.</li>
-<li>Existing IDs are never migrated at startup, reload or upgrade. Changes in
-  <code>myhome.yaml</code>, discovery names, area changes and devices renamed while unloaded
-  do not trigger a rename or a catch-up operation.</li>
-<li>Unique IDs, registry identity, areas, icons, enabled/disabled settings and other
-  customisations are preserved. Entities from another integration or gateway are
-  excluded, even on a shared device.</li>
-</ul>
-<p><strong>Enable this only when you want subsequent renames to change entity IDs.</strong> MyHOME
-does not rewrite references in automations, dashboards, YAML, templates or external
-clients. Review those references after renaming; a generated ID may already be in
-use there. Disabling the option stops future updates; it does not undo earlier ones.</p>
-<p>For a one-time update or an ID skipped by these safeguards, leave the option off
-and use the device page's <strong>⋮ → Recreate entity IDs</strong> action, which provides a
-preview and confirmation. If a device was already renamed while its ID stayed
-unchanged, restoring the original device name and saving can also make the ID
-eligible for a subsequent rename, provided it matches Core's current generator.</p>
 <h2 id="broadcast-re-sync-group-area-general">🔁 Broadcast re-sync (group / area / general)<a class="headerlink" href="#broadcast-re-sync-group-area-general" title="Permanent link">&para;</a></h2>
 <p>A group (<code>*1*x*#G##</code>), area (<code>*1*x*A##</code>) or general (<code>*1*x*0##</code>) command comes from a
 physical wall switch or scene, not from Home Assistant, so no single actuator's own
@@ -2329,8 +2381,11 @@ Instead, the integration debounces across a bidirectional window:</p>
    the sweep is cancelled:</p>
 </li>
 <li>
-<p>For an <strong>area</strong>, only point-to-point echoes in that matching area cancel its timer;
-     unrelated areas stay armed.</p>
+<p>For an <strong>area</strong>, point-to-point echoes in that matching area only skip or cancel its
+     timer once <em>all</em> known <code>light</code>/<code>switch</code> entities registered in that area have echoed
+     with matching polarity (preventing partial CEN/Scenario bursts such as <code>MH200N</code>
+     scenarios from starving non-echoing actuators in the same area); unrelated areas stay
+     armed.</p>
 </li>
 <li>For a <strong>group</strong>, receiving multiple member echoes ($\ge 2$) in the window cancels its
      timer, protecting against unrelated bus frames.</li>
@@ -2380,7 +2435,7 @@ Options Flow if your gateway lags on repeated status requests.</p>
 </tr>
 </tbody>
 </table>
-<p>Addresses follow the OpenWebNet <code>WHERE</code> conventions - point-to-point <code>APL</code> (<code>12</code>), area <code>A</code> (<code>1</code>), group <code>#G</code> (<code>#5</code>), general <code>0</code> - plus the F422 bus-routing form <code>APL#4#&lt;bus&gt;</code> (<code>0311#4#01</code>). Area, group and general frames never create an entity: they are broadcasts, not devices (the alarm central unit is the one subsystem where <code>WHERE = 0</code> is a real device). Translation frames (<code>*1*1000#1*14##</code>) are ignored as well.</p>
+<p>Addresses follow the OpenWebNet <code>WHERE</code> conventions - point-to-point <code>APL</code> (<code>12</code>), area <code>A</code> (<code>1</code>), group <code>#G</code> (<code>#5</code>), general <code>0</code> - plus the F422 bus-routing form <code>APL#4#&lt;bus&gt;</code> (<code>0311#4#01</code>). An area-0 point with PL 1..9 is spelled in two digits everywhere (<code>04</code>, not <code>0004</code>): <code>myhome.yaml</code> devices, <code>expose:</code> entries and the UI expose flow resolve <code>0004</code> to <code>04</code>, the form the gateways accept and report (#147). Area, group and general frames never create an entity: they are broadcasts, not devices (the alarm central unit is the one subsystem where <code>WHERE = 0</code> is a real device). Translation frames (<code>*1*1000#1*14##</code>) are ignored as well.</p>
 <p>Platforms only add what differs: which <code>WHO</code> they serve, how a device is built, and a few hooks - the light platform hands WHO 1 frames for configured switches and motion / illuminance sensors to those platforms instead of creating a light, the cover platform relays a general <code>*2*x*0##</code> to every cover, the media player maps stereo-module pseudo zones (<code>10x</code>-<code>14x</code>) to amplifier <code>x</code>, the climate platform reads the zone a heating frame concerns from its parameters (<code>*4*4001#5*0##</code> is about zone 5), and the sensor and binary-sensor platforms run one such cycle per subsystem they serve (energy meters, illuminance and temperature probes; dry contacts, auxiliary channels and motion sensors). A meter address owns one entity per measurement it reports. Contacts and probes remember every spelling of their address (<code>0021</code> and <code>21</code>) so a renamed entity is never duplicated after a restart.</p>
 <p>Buttons have no bus address: lock / unlock and calibrate buttons are created for the actuators the other platforms announce.</p>
 <hr />
@@ -2437,11 +2492,13 @@ Options Flow if your gateway lags on repeated status requests.</p>
 <li><strong>Starts the clock at the write, not at enqueue.</strong> The gateway's send queue reports when each frame actually left the socket (after any reconnect of the command session, and only when the gateway acknowledged it); with several covers commanded together the last one can leave many seconds after it was queued. A frame that is never delivered (connection lost, NACK) cancels its report, and the cover falls back to a run timed from now.</li>
 <li><strong>Opens an echo window</strong> for each command, from enqueue until 1.5 s after the write (bounded: it closes at once when delivery fails, and 30 s after enqueue at the latest). Inside it, the relayed stop status is ignored and our own direction status <strong>re-anchors the clock to the real motor start</strong> — no gateway-specific latency constant needed. A gateway that never relays that status gets the measured 0.55 s motor-start delay added to the write time instead. An opposite-direction frame, or any frame after the window, is a genuine command (wall switch, scenario) and is handled normally.</li>
 <li><strong>Times <code>set_position</code> from that anchor</strong>, then re-anchors at the target when the timer fires and lets the stop frame's own write time settle the estimate (target plus whatever the queue delay added).</li>
-<li><strong>Freezes the estimate for a stop at its write</strong>, not at enqueue, and repaints the entity at every write so the estimate is right without waiting for a status frame.</li>
+<li><strong>Freezes the estimate for a stop provisionally at its write</strong>, not at enqueue, and repaints the entity at every write so the estimate is responsive without waiting for a status frame. Gateways that never relay stop status keep this write-time freeze.</li>
+<li><strong>Re-anchors at the stop status echo</strong>, when the gateway relays it within the echo window (34–47 ms, median 42 ms on MyHOMEServer1; 64–120 ms on F461). When the stop status arrives, the final position and <code>last_run_seconds</code> are re-anchored from <code>stop status - start anchor</code>.</li>
+<li><strong>Prioritises cover stops ahead of queued commands</strong> (<code>#645</code>), while preserving FIFO order relative to earlier stops and never overtaking pending motion frames for the same cover or overlapping scopes (such as area or general broadcasts). Across multi-worker gateways, workers acquire sequential tickets at dequeue to keep wire delivery strictly FIFO regardless of session pacing.</li>
 </ol>
 <p>Trade-off: a wall-switch stop pressed in the ≤ 0.6 s between the write and the motor start is treated as an echo. The motor has not moved yet, so nothing is lost; once the motor-start status arrives the window closes and wall-switch stops are honoured immediately.</p>
 <p><strong>Calibration.</strong> Because the actuator reports its motor start and stop, a timed cover can measure its own travel: <code>myhome.calibrate_cover</code> (or the <em>Calibrate travel time</em> button on the cover's device, or <em>Calibrate all covers</em> on the gateway) drives the cover fully up, then fully down (timed), then fully up (timed), one cover at a time per gateway, and stores the up and down times in the config entry options. The model then uses the up time when opening and the down time when closing. Measured values are the actuator's run times — equal to the physical travel on an installer-calibrated actuator; otherwise an upper bound. A run that ends at the factory 60 s cutoff is refused and nothing is stored; a run-time parameter the installer set longer than the travel (30 s on a 14 s shutter) is not detectable on the bus and is stored as is — a run stopped by hand (<code>last_run_seconds</code>) is the only check. See <a href="../services/#6-myhomecalibrate_cover">Services → <code>myhome.calibrate_cover</code></a>.</p>
-<p><em>(#302, measurements by @Interstellar0verdrive)</em></p>
+<p><em>(#302, #645, #705, measurements by @Interstellar0verdrive and @gdluck)</em></p>
 <hr />
 <h2 id="lights-learn-colour-capabilities-additively">🎨 Lights learn colour capabilities additively<a class="headerlink" href="#lights-learn-colour-capabilities-additively" title="Permanent link">&para;</a></h2>
 <p>Colour modes are promoted from bus frames, and never removed:</p>
@@ -2536,10 +2593,10 @@ Options Flow if your gateway lags on repeated status requests.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

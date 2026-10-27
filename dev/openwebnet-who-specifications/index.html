@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2370,7 +2370,7 @@
 <li><strong><code>WHO = 6</code></strong>: Dedicated audio door entry call frames (Seeking standalone document beyond WHO 7 / Intro).</li>
 <li><strong><code>WHO = 9</code></strong>: Auxiliary channels (AUX 1–9) (Seeking newer official PDF than 2006).</li>
 <li>
-<p><em>(Note: </em><em><code>WHO = 14</code></em><em> Actuator Lock is fully reverse-engineered and documented below; Legrand never published a public standalone PDF).</em></p>
+<p><em>(Note: <strong><code>WHO = 14</code></strong> Actuator Lock is fully reverse-engineered and documented below; Legrand never published a public standalone PDF).</em></p>
 </li>
 <li>
 <p><strong>Software Tooling &amp; Dictionaries (MyHOME_Suite / TiMyHome)</strong>:</p>
@@ -2445,7 +2445,7 @@
 <td style="text-align: center;"><strong>v2.0.0 (2013-11-27)</strong></td>
 <td style="text-align: center;">🟢</td>
 <td style="text-align: left;"><code>climate</code>, <code>sensor</code></td>
-<td style="text-align: left;">4-zone / 99-zone central units (3550), standalone thermostats (L/N/NT4691), external probe sensors (3475). Added dimension 22 (offset) and dimension 11 (fancoil 3-speed). Contributed by GianlucaCh.</td>
+<td style="text-align: left;">4-zone / 99-zone central units (3550), standalone thermostats (L/N/NT4691, Living Now), external probe sensors (3475). Supports dimension 0 (temperature), dimension 11 (fancoil 3-speed), dimension 12/14 (setpoints), dimension 13 (offset), dimension 20 (actuators), and dimension 60 (relative humidity). Contributed by GianlucaCh.</td>
 </tr>
 <tr>
 <td style="text-align: center;"><strong>5</strong></td>
@@ -2841,7 +2841,11 @@
 <p><strong>Dimension Request (Query)</strong>:
    <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>*#WHO*WHERE*DIMENSION##
 </span></code></pre></div>
-   <em>Example</em>: <code>*#4*1*0##</code> (Query measured temperature of Zone 1)</p>
+   <em>Examples</em>:</p>
+</li>
+<li><code>*#4*1*0##</code> (Query measured temperature of Zone 1)</li>
+<li>
+<p><code>*#4*1*60##</code> (Query relative humidity of Zone 1)</p>
 </li>
 <li>
 <p><strong>Dimension Writing (Command with Parameters)</strong>:
@@ -2853,7 +2857,11 @@
 <p><strong>Dimension Response (Status Report)</strong>:
    <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>*#WHO*WHERE*DIMENSION*VAL1*VAL2*...*VALn##
 </span></code></pre></div>
-   <em>Example</em>: <code>*#4*1*0*0215*1##</code> (Zone 1 temperature is 21.5 °C, Heating mode)</p>
+   <em>Examples</em>:</p>
+</li>
+<li><code>*#4*1*0*0215*1##</code> (Zone 1 temperature is 21.5 °C, Heating mode)</li>
+<li>
+<p><code>*#4*1*60*55##</code> (Zone 1 relative humidity is 55%)</p>
 </li>
 <li>
 <p><strong>Acknowledge (ACK / NACK)</strong>:</p>
@@ -2931,10 +2939,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

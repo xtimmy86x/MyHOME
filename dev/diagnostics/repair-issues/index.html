@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1882,6 +1882,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#legacy-yaml-configuration-imported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy YAML Configuration Imported
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Legacy YAML Configuration Imported">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-means_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it means
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-resolve_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3334,6 +3373,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#legacy-yaml-configuration-imported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy YAML Configuration Imported
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Legacy YAML Configuration Imported">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-means_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it means
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-resolve_15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to resolve
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -3368,6 +3446,7 @@
 <li>Dimension 0: <code>*#13**0*&lt;HH&gt;*&lt;MM&gt;*&lt;SS&gt;*999##</code></li>
 <li>Dimension 22: <code>*#13**22*&lt;HH&gt;*&lt;MM&gt;*&lt;SS&gt;*999*&lt;DAY&gt;*&lt;MONTH&gt;*&lt;YEAR&gt;##</code></li>
 </ul>
+<p><em>(Note: The F461 gateway is configured via the Home + Project app and its firmware always reports <code>999</code> over OpenWebNet; it is automatically exempted from this repair issue).</em></p>
 <h3 id="why-it-matters">Why it matters<a class="headerlink" href="#why-it-matters" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Clock &amp; Timestamp Drift</strong>: Without a configured timezone, scheduled scenario triggers and time broadcasts on the SCS bus may diverge from local daylight saving time or Home Assistant's clock.</li>
@@ -3633,6 +3712,20 @@ $$\Delta = S_{\text{sec}} \setminus S_{\text{pri}}$$
 <p>Keep the audio matrix on one gateway until #426 is fixed, and remove the sound zones of the other gateway.</p>
 <h3 id="how-it-clears_5">How it clears<a class="headerlink" href="#how-it-clears_5" title="Permanent link">&para;</a></h3>
 <p>Automatically, when only one gateway has sound zones.</p>
+<hr />
+<h2 id="legacy-yaml-configuration-imported">Legacy YAML Configuration Imported<a class="headerlink" href="#legacy-yaml-configuration-imported" title="Permanent link">&para;</a></h2>
+<p><strong>Repair Key</strong>: <code>legacy_yaml_imported</code><br />
+<strong>Severity</strong>: <code>WARNING</code><br />
+<strong>Auto-Resolving</strong>: Informational<br />
+<strong>Fixable via UI</strong>: No</p>
+<h3 id="what-it-means_15">What it means<a class="headerlink" href="#what-it-means_15" title="Permanent link">&para;</a></h3>
+<p>The first time the integration reads a valid <code>myhome.yaml</code> section for a gateway, it copies the validated device definitions into the gateway's config entry options (<code>migrated_yaml_platforms</code>) and raises this notice once.</p>
+<ul>
+<li>While <code>myhome.yaml</code> exists, the file stays in charge. On every start the copy is refreshed if the file changed; an empty section for the gateway (<code>&lt;mac&gt;: {}</code>) empties it.</li>
+<li>If the file is removed, cannot be parsed, fails validation, or no longer has a section for this gateway, the gateway's devices load from the last copy instead, including their travel times and feature flags.</li>
+</ul>
+<h3 id="how-to-resolve_15">How to resolve<a class="headerlink" href="#how-to-resolve_15" title="Permanent link">&para;</a></h3>
+<p>This notice is informational. Once you have verified your entities in Home Assistant, you can archive or remove <code>myhome.yaml</code> and dismiss the notice.</p>
 
 
 
@@ -3692,10 +3785,10 @@ $$\Delta = S_{\text{sec}} \setminus S_{\text{pri}}$$
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

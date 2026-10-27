@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1038,6 +1038,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="📡 Advanced: Listening to the Event Bus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#who-17-scenario-programmer-events-myhome_scene_event" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WHO 17 Scenario Programmer Events (myhome_scene_event)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2175,6 +2192,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="📡 Advanced: Listening to the Event Bus">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#who-17-scenario-programmer-events-myhome_scene_event" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WHO 17 Scenario Programmer Events (myhome_scene_event)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2262,11 +2296,29 @@
 <td style="text-align: left;">N/A</td>
 <td style="text-align: left;"><code>WHAT = 31</code> (Closed), <code>WHAT = 32</code> (Opened)</td>
 </tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus Actions</strong></td>
+<td style="text-align: left;">N/A</td>
+<td style="text-align: left;"><code>WHAT = 11..15</code> (<code>on</code>, <code>off</code>, <code>increase</code>, <code>decrease</code>, <code>stop</code>)</td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="native-home-assistant-device-triggers">🪄 Native Home Assistant Device Triggers<a class="headerlink" href="#native-home-assistant-device-triggers" title="Permanent link">&para;</a></h2>
 <p>In MyHOME v2.0, physical pushbuttons are automatically discovered and registered as <strong>Home Assistant Devices</strong>. You do <strong>not</strong> need to write complex template sensors or manual event listeners to automate them!</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>Coexistence with Native MyHome Scenarios &amp; Actuator Addresses (<code>MyHome_Up</code> / <code>MyHOME_Suite</code> / <code>TiMH200N</code>)</strong><br />
+Home Assistant passively observes <code>WHO = 15</code> / <code>WHO = 25</code> frames on the SCS bus; it does <strong>not</strong> intercept or suppress them. Keep two plant-level rules in mind:</p>
+<ol>
+<li><strong>Do not bind the same button to both a native MyHome scenario and a Home Assistant automation (unless intended)</strong>:<br />
+   If a pushbutton is already configured in the <strong>MyHome_Up</strong> app (<code>MyHomeServer1</code>) or <strong>MyHOME_Suite / TiMH200N</strong> (<code>MH200N</code>, <code>MH201</code>, <code>MH202</code>, <code>F420</code>) to trigger a native bus scenario or automation, pressing that button will execute the native MyHome scenario <strong>and</strong> any Home Assistant automation attached to it at the same time (<a href="https://github.com/orgs/OpenWebNet-HA/discussions/770#discussioncomment-19121695">Discussion #770</a>).</li>
+<li>Only bind a button in both places when you intentionally want Home Assistant to <strong>extend</strong> a native bus scenario (for example, switching non-SCS Zigbee/Matter devices alongside an existing SCS scene).</li>
+<li>For a <strong>Home Assistant–only button</strong>, keep the CEN/CEN+ virtual object configured on the physical control so it emits frames on the bus, but remove or leave empty any scenario action bound to that button in <strong>MyHome_Up</strong> / <strong>MyHOME_Suite</strong>.</li>
+<li><strong>Never share a Basic CEN (<code>WHO = 15</code>) <code>A</code>/<code>PL</code> address with a physical actuator (<code>WHO = 1</code> / <code>WHO = 2</code>)</strong>:<br />
+   Per BTicino's scenario-programmer specifications, a control configured in Basic CEN mode (<code>M = CEN</code>) must use a dedicated <code>A</code>/<code>PL</code> address that <strong>does not duplicate any light or shutter actuator address</strong>. If a CEN control shares an address with a light actuator (e.g. <code>WHERE = 61</code>), toggling or polling that light from Home Assistant (<code>*1*1*61##</code> or <code>*#1*61##</code>) causes the CEN control at <code>61</code> to emit <code>*15*&lt;BUTTON&gt;*61##</code> on the bus and fire whatever scenario is bound to it in the scenario programmer (<a href="https://github.com/OpenWebNet-HA/MyHOME/issues/612">#612</a>, <a href="https://github.com/OpenWebNet-HA/MyHOME/issues/773">#773</a>).</li>
+</ol>
+</div>
 <h3 id="supported-trigger-types">Supported Trigger Types<a class="headerlink" href="#supported-trigger-types" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>pushbutton_short_press</code>: Fired immediately upon a quick tap.</li>
@@ -2396,6 +2448,29 @@
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">pushbutton</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">event</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pushbutton_short_press</span>
 </span></code></pre></div>
+<h3 id="who-17-scenario-programmer-events-myhome_scene_event">WHO 17 Scenario Programmer Events (<code>myhome_scene_event</code>)<a class="headerlink" href="#who-17-scenario-programmer-events-myhome_scene_event" title="Permanent link">&para;</a></h3>
+<p>When a physical scenario programmer (e.g. MH200N, MH201, F420) executes or updates a stored scenario on the OpenWebNet bus, the integration fires <code>myhome_scene_event</code>:</p>
+<ul>
+<li><code>scenario</code>: Integer scenario identifier (e.g. <code>1</code>)</li>
+<li><code>where</code>: Wire scenario address</li>
+<li><code>state</code>: Numeric state (<code>1</code> = started, <code>2</code> = stopped, <code>3</code> = enabled, <code>4</code> = disabled)</li>
+<li><code>is_on</code>: <code>True</code> when started, <code>False</code> when stopped, <code>None</code> for enable/disable</li>
+<li><code>is_enabled</code>: <code>True</code> when enabled, <code>False</code> when disabled, <code>None</code> for start/stop</li>
+<li><code>gateway_mac</code>: Active gateway MAC address (with standby failover support)</li>
+<li><code>entry_id</code>: Config entry identifier</li>
+</ul>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p><strong>Scenario Lifecycle vs. Load Power State</strong>:<br />
+In OpenWebNet WHO 17 semantics, <code>is_on: true</code> denotes that the <strong>scenario routine has started executing</strong>, not that electrical circuits are turned on. For example, a "Leave Home" scene programmed to switch all lights OFF will emit <code>is_on: true</code> upon start, followed by actuator OFF commands, and <code>is_on: false</code> when execution finishes.</p>
+</div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">trigger</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">event</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">event_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myhome_scene_event</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">event_data</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">      </span><span class="nt">scenario</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">      </span><span class="nt">is_on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
 <p>Enabling <strong>Generate Events</strong> in the <strong>Options Flow</strong> additionally fires every bus frame as <code>myhome_message_event</code>.</p>
 <hr />
 <h2 id="openwebnet-frame-reference">📜 OpenWebNet Frame Reference<a class="headerlink" href="#openwebnet-frame-reference" title="Permanent link">&para;</a></h2>
@@ -2456,6 +2531,60 @@
 <td style="text-align: center;">25</td>
 <td style="text-align: left;"><code>*25*24#&lt;BUTTON&gt;*&lt;WHERE&gt;##</code></td>
 <td style="text-align: left;"><code>*25*24#1*21##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus On</strong></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: left;"><code>*25*11#0*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*25*11#0*11##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus Off</strong></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: left;"><code>*25*12*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*25*12*11##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus Increase</strong></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: left;"><code>*25*13#0#5*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*25*13#0#5*11##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus Decrease</strong></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: left;"><code>*25*14#0#5*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*25*14#0#5*11##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scenario Plus Stop</strong></td>
+<td style="text-align: center;">25</td>
+<td style="text-align: left;"><code>*25*15*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*25*15*11##</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scene Start</strong></td>
+<td style="text-align: center;">17</td>
+<td style="text-align: left;"><code>*17*1*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*17*1*1##</code> (Scenario 1 started)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scene Stop</strong></td>
+<td style="text-align: center;">17</td>
+<td style="text-align: left;"><code>*17*2*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*17*2*1##</code> (Scenario 1 stopped)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scene Enable</strong></td>
+<td style="text-align: center;">17</td>
+<td style="text-align: left;"><code>*17*3*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*17*3*1##</code> (Scenario 1 schedule enabled)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Scene Disable</strong></td>
+<td style="text-align: center;">17</td>
+<td style="text-align: left;"><code>*17*4*&lt;WHERE&gt;##</code></td>
+<td style="text-align: left;"><code>*17*4*1##</code> (Scenario 1 schedule disabled)</td>
 </tr>
 </tbody>
 </table>
@@ -2518,10 +2647,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

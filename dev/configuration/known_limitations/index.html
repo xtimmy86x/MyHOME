@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -33,10 +33,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -2177,6 +2177,16 @@
 <td style="text-align: left;">Those gateways only implement the numeric (SHA-less) password.</td>
 <td style="text-align: left;">Configure the numeric OpenWebNet password on the gateway.</td>
 </tr>
+<tr>
+<td style="text-align: left;"><strong>Broadcast, Area 00, and General 0 frames do not generate entities.</strong></td>
+<td style="text-align: left;">Broadcast frames (<code>WHERE="0"</code>, <code>"00"</code>) coordinate multiple actuators and do not represent individual physical devices (except WHO 5 where <code>WHERE="0"</code> is the alarm central unit). Creating entities from these frames produced phantom entities like <code>sensor.zone_00</code> or <code>climate.climate_zone_00</code>.</td>
+<td style="text-align: left;">Control individual actuators or use YAML declared groups (<code>where: '#G'</code>) and manual scenes.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Secondary energy meters (<code>52</code>–<code>59</code>) require bus activity or manual configuration for initial setup.</strong></td>
+<td style="text-align: left;">Startup discovery queries factory default meter <code>51</code> (<code>*#18*51*51##</code>, <code>*#18*51*113##</code>) to avoid long startup sweep delays.</td>
+<td style="text-align: left;">Secondary meters appear automatically when they transmit power/energy readings on the bus, or immediately when running <code>myhome.sweep_bus</code>. They can also be declared in <code>myhome.yaml</code>.</td>
+</tr>
 </tbody>
 </table>
 <h2 id="lighting-who-1">Lighting (WHO 1)<a class="headerlink" href="#lighting-who-1" title="Permanent link">&para;</a></h2>
@@ -2242,6 +2252,11 @@
 <td style="text-align: left;">Queue is automatic; <code>myhome.stop_cover_calibration</code> cancels it.</td>
 </tr>
 <tr>
+<td style="text-align: left;"><strong>Rapid concurrent point-to-point commands behind an F422 interface can drop frames.</strong></td>
+<td style="text-align: left;">The physical F422 interface internal FIFO buffer and secondary SCS bus arbitration saturate under rapid unpaced bursts.</td>
+<td style="text-align: left;">Use native General broadcast covers (<code>where: '0'</code>, <code>bus_interface: '&lt;id&gt;'</code>) which send a single OpenWebNet broadcast (<code>*2*WHAT*0#4#&lt;id&gt;##</code>), or rely on the integration's automatic 0.3 s paced member fan-out for position control. See <a href="../covers/#the-bticino-way--real-world-plant-discovery">Covers</a>.</td>
+</tr>
+<tr>
 <td style="text-align: left;"><strong>No slat / tilt control.</strong></td>
 <td style="text-align: left;">Not implemented; the frames exist in OWNd.</td>
 <td style="text-align: left;"><code>myhome.send_message</code> with the tilt frame.</td>
@@ -2267,6 +2282,11 @@
 <td style="text-align: left;"><strong>4-zone central unit 4695 (<code>#0#1</code>) is verified on synthetic frames only.</strong></td>
 <td style="text-align: left;">No community trace from a 4695 plant yet.</td>
 <td style="text-align: left;">Please attach a trace to RFC #248 if you own one.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>A commanded setpoint (dimension 14) that arrives without a following dimension 12 does not update the slider once the zone has reported a setpoint in force.</strong></td>
+<td style="text-align: left;">The slider follows dimension 12 (the setpoint the thermostat regulates to, knob offset included) as soon as the zone has reported it; a dimension 14 that is not the echo of a write from Home Assistant is kept as the commanded value only. Both captured plants (F461 2.0.11 with a KW4691, MyHomeServer1 3.87.13 with 36 zones) emit dimension 12 after every write and after every local change, so the slider stays current there; a gateway that echoed only dimension 14 for an external change would leave the slider on the previous value until the next dimension 12 report or poll.</td>
+<td style="text-align: left;">Reload the entity (<code>homeassistant.update_entity</code>) to poll <code>*#4*Z##</code>; please attach a trace if you see this.</td>
 </tr>
 <tr>
 <td style="text-align: left;"><strong>Probes (<code>WHERE ≥ 100</code>) are read-only and push-driven.</strong></td>
@@ -2447,10 +2467,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>

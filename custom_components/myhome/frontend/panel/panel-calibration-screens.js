@@ -1263,7 +1263,10 @@ function finalize(screen, ctx) {
   screen.stepper = {
     interrupted: !!screen.interrupted,
     // Review: before the path is fixed (A-01, A-02) the step without a total, which the path will decide.
-    line: previewEnd ? t("wiz_T517") : screen.phase === "done" ? t("wiz_T153") : unknownCase ? t(PHASES.intro)
+    // L-123: after a real save the line names the last step completed, as every other line names its step
+    // («Riepilogo · 7 di 8» on path A, whose optional fine-tuning stays ahead; «Riepilogo · N di N» elsewhere).
+    line: previewEnd ? t("wiz_T517") : screen.phase === "done" ? fill(t("wizPhaseLine"), { phase: t(PHASES.summary), n: phases.indexOf("summary") + 1, total: phases.length })
+      : unknownCase ? t(PHASES.intro)
       : ["choose", "path"].includes(ctx.stage) ? fill(t("wiz_T585"), { phase: t(PHASES[screen.phase] || "wiz_T007"), n: current + 1 })
       : fill(t(screen.interrupted ? "wiz_T461" : "wizPhaseLine"), { phase: screen.phase === "finetune" ? t("wiz_T114") : t(PHASES[screen.phase] || "wiz_T007"),
       n: current + 1, total: phases.length }),

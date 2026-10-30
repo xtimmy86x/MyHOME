@@ -4466,3 +4466,15 @@ test("L-122: A-02 says how many of the three paths can be used for now; with the
   assert.equal(first(at("to_measure", true)), "Ci sono **tre percorsi di misurazione**.", "PREVIEW_PATHS on: as before");
   assert.equal(first(at("measured", true)), "Ci sono **tre percorsi di misurazione**.");
 });
+
+test("L-123: after a real save the stepper line names the last step completed, as every other line names its step", () => {
+  const t = (key) => translations.it[key] || key;
+  const saved = (path, scope = null) => buildScreen({ t, language: "it", stage: "saved", path, scope, local: { saved: { target: "cover_only" } }, cover: { name: "Cucina 2" } });
+  const a = saved("A");
+  assert.equal(a.code, "A-34");
+  assert.equal(a.stepper.line, "Riepilogo · 7 di 8", "path A: fine-tuning (optional) stays ahead");
+  assert.deepEqual(a.stepper.phases.map((phase) => phase.state).slice(-2), ["done", "future"]);
+  const c = saved("C", "times_only");
+  assert.match(c.stepper.line, /^Riepilogo · (\d+) di \1$/, "a path without fine-tuning: the last of its steps");
+  assert.doesNotMatch(`${a.stepper.line} ${c.stepper.line}`, /fuori dai passi/);
+});

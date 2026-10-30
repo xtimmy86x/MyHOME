@@ -1581,6 +1581,10 @@ test("L-47 (revised): every bar keeps the primary and up to two secondaries in v
   assert.deepEqual(ids(overflow([a("p", "primary"), a("b"), a("c")])), [["p", "b", "c"], [], []], "three: all in view");
   assert.deepEqual(ids(overflow([a("p", "primary"), a("b"), a("s", "stop")])), [["p", "b"], [], ["s"]], "Stop in view, last");
   assert.deepEqual(ids(overflow([a("p", "primary"), a("s", "danger-outline"), a("c"), a("d"), a("e")])), [["p"], ["c", "d", "e"], ["s"]], "red never in the disclosure");
+  // L-125: an action marked visible stays beside the primary; three in view at most.
+  const v = (id) => ({ id, kind: "secondary", visible: true });
+  assert.deepEqual(ids(overflow([a("p", "primary"), v("b"), a("c"), a("d")])), [["p", "b"], ["c", "d"], []]);
+  assert.deepEqual(ids(overflow([a("p", "primary"), a("b"), v("c"), v("d"), v("e")])), [["p", "c", "d"], ["b", "e"], []], "never more than three");
 });
 
 test("A-34 offers fine-tuning once the calibration is saved: path C on the same cover, from the values just written", async () => {
@@ -1604,11 +1608,12 @@ test("A-34 offers fine-tuning once the calibration is saved: path C on the same 
   const kinds = [...wiz().querySelectorAll(".wiz-actions .wiz-action")].map((item) => [item.dataset.wiz, item.className.replace("wiz-action ", "")]);
   assert.deepEqual(kinds, [["close", "primary"], ["assign-profile", "secondary"], ["another", "secondary"], ["open-cover", "secondary"], ["refine", "secondary"]]);
   assert.equal(wiz().querySelector('.wiz-actions [data-wiz="close"]').textContent, "Back to the list");
-  // In a one-column bar the four secondaries are under «Other options ▾» (CSS hides them there).
+  // In a one-column bar the secondaries are under «Other options ▾» (CSS hides them there); L-125: a profile created
+  // in this session keeps «Assign this profile…» beside the primary. In the columns the order is the same as before.
   assert.equal(wiz().querySelector(".wiz-main .wiz-action"), null, "nothing in the text column");
-  assert.deepEqual([...wiz().querySelectorAll(".wiz-actions .wiz-more .wiz-more-list .wiz-action")].map((item) => item.dataset.wiz), ["assign-profile", "another", "open-cover", "refine"]);
+  assert.deepEqual([...wiz().querySelectorAll(".wiz-actions .wiz-more .wiz-more-list .wiz-action")].map((item) => item.dataset.wiz), ["another", "open-cover", "refine"]);
   const order = [...wiz().querySelector(".wiz-actions").children].map((item) => item.dataset.wiz || item.className);
-  assert.deepEqual(order, ["close", "wiz-more"], "the primary, then the disclosure");
+  assert.deepEqual(order, ["close", "assign-profile", "wiz-more"], "the primary, the new profile to other covers, then the disclosure");
   const toggle = wiz().querySelector(".wiz-actions .wiz-more-toggle");
   assert.deepEqual([toggle.textContent.trim(), toggle.getAttribute("aria-expanded")], ["Other options", "false"]);
   toggle.click(); await tick();
@@ -2281,7 +2286,13 @@ test("review P2: after a real save A-34's primary is «Back to the list»; fine-
   assert.ok(on.body.endsWith(translations.it.wiz_T319));
   // Phone (one column): the primary, and the rest under «Altre opzioni ▾» once they are more than three.
   const { overflow } = await import("../../custom_components/myhome/frontend/panel/panel-calibration-wizard.js");
+  // L-125: a profile just created: «Assegna questo profilo…» beside the primary; one updated: under «Altre opzioni».
   assert.deepEqual([overflow(off.actions).shown.map((action) => action.id), overflow(off.actions).more.map((action) => action.id)],
+    [["close", "assign-profile"], ["another", "open-cover"]]);
+  assert.deepEqual([overflow(on.actions).shown.map((action) => action.id), overflow(on.actions).more.map((action) => action.id)],
+    [["close", "assign-profile"], ["another", "open-cover", "refine"]]);
+  const updated = saved(false, "profile_update");
+  assert.deepEqual([overflow(updated.actions).shown.map((action) => action.id), overflow(updated.actions).more.map((action) => action.id)],
     [["close"], ["assign-profile", "another", "open-cover"]]);
   const coverOnly = saved(false, "cover_only");
   assert.deepEqual([overflow(coverOnly.actions).shown.map((action) => action.id), overflow(coverOnly.actions).more.length], [["close", "another", "open-cover"], 0],

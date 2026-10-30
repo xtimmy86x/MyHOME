@@ -978,7 +978,10 @@ function savedScreen(screen, ctx, tx, values) {
   // Review P2: A-34's primary is «Torna all'elenco»; fine-tuning (path C on the same cover) is a secondary offered only
   // while it can be run, and only then the body's second paragraph (T319) says the cover will move.
   // A profile was created or updated: it can be given to similar covers at once (the maintainer's Assign dialog).
-  const assign = ["profile_new", "profile_update"].includes(saved.target) ? [{ id: "assign-profile", label: t("wiz_T426"), kind: "secondary" }] : [];
+  // L-125: a profile just created has no cover but this one: giving it to others is then the likely next step, kept
+  // beside the primary where the bar folds the rest under «Altre opzioni» (phone); an updated profile's stays there.
+  const assign = ["profile_new", "profile_update"].includes(saved.target)
+    ? [{ id: "assign-profile", label: t("wiz_T426"), kind: "secondary", ...(saved.target === "profile_new" ? { visible: true } : {}) }] : [];
   // A new profile left the previous one without covers: it can be deleted from the Profiles tab (never by itself).
   if (saved.target === "profile_new" && saved.orphan) screen.note = { tone: "info", text: fill(t("wiz_T431"), { old: saved.orphan, tab: t("profileListTitle") }) };
   // L-26: another device saved it: the same A-34, read only: «Chiudi» alone.

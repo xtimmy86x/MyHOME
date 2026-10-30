@@ -1641,7 +1641,9 @@ const STOP_SLOT = ["stop", "stopped"];
 export function overflow(actions) {
   const red = actions.filter((action) => RED_KINDS.includes(action.kind)), others = actions.filter((action) => !RED_KINDS.includes(action.kind));
   if (others.length <= 3) return { shown: others, more: [], red };
-  return { shown: others.slice(0, 1), more: others.slice(1), red };
+  // The primary stays visible, with the actions a screen marks `visible` (L-125), three at most; the rest fold.
+  const shown = others.filter((action, index) => index === 0 || action.visible).slice(0, 3);
+  return { shown, more: others.filter((action) => !shown.includes(action)), red };
 }
 
 /** Z-2: a value the reading field accepts (a number within its own limits). */

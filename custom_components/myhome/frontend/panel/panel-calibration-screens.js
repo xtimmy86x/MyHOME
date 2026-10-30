@@ -214,7 +214,11 @@ export function buildScreen(ctx) {
         : !profiles ? fill(t("wiz_T466"), { option: label.A })
           : !(cover?.travel_cm > 0) ? fill(t("wiz_T465"), { option: label.A }) : fill(t("wiz_T476"), { option: label.A, travel: n(cover.travel_cm, 0) });
     // G4-2: the reason ends with «If in doubt, choose this option.»; no separate «If unsure» line.
-    const body = [t("wiz_T016"), `${reason} ${t("wiz_T475")}`].join("\n\n");
+    // L-122: without the previews (PREVIEW_PATHS) the first sentence says how many of the three can be used for now
+    // (Ⓑ is a preview; Perfezionamento only on a cover already measured).
+    const usable = options.filter((option) => !option.disabled).length;
+    const intro = previews ? t("wiz_T016") : t(usable === 1 ? "wiz_T592" : usable === 2 ? "wiz_T593" : "wiz_T016");
+    const body = [intro, `${reason} ${t("wiz_T475")}`].join("\n\n");
     Object.assign(screen, { code: "A-02", phase: "intro", title: tx("wiz_T015", { name }), subline: pathContext(t, cover, language), body,
       choice: { name: "path", kind: "radio", label: tx("wiz_T015", { name }), legendHidden: true, value: chosen, options },
       actions: [{ id: "path", label: t("wiz_T006"), kind: "primary", disabled: !chosen }],

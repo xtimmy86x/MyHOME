@@ -4455,3 +4455,14 @@ test("Z-14: each reading shows the drawing nearest its expected height; A-23 its
   assert.equal(id(preview({ step: "quarter_close", expected_cm: 52 })), "curtain-tape-quarter", "a quarter");
   assert.equal(id(preview({ step: "three_quarter_close", expected_cm: 150 })), "curtain-tape-three-quarters", "three quarters");
 });
+
+test("L-122: A-02 says how many of the three paths can be used for now; with the previews on, the three-paths wording", () => {
+  const t = (key) => translations.it[key] || key;
+  const first = (screen) => screen.body.split("\n\n")[0];
+  const at = (status, previews) => buildScreen({ t, language: "it", stage: "path", profiles: [{ id: "p", name: "alte", referenceTravel: 198 }],
+    cover: { name: "Cucina 2", status, travel_cm: 150 }, previews });
+  assert.equal(first(at("to_measure", false)), "Ci sono **tre percorsi di misurazione**: per ora se ne può usare uno.", "never measured: only Ⓐ");
+  assert.equal(first(at("measured", false)), "Ci sono **tre percorsi di misurazione**: per ora se ne possono usare due.", "measured: Ⓐ and fine-tuning");
+  assert.equal(first(at("to_measure", true)), "Ci sono **tre percorsi di misurazione**.", "PREVIEW_PATHS on: as before");
+  assert.equal(first(at("measured", true)), "Ci sono **tre percorsi di misurazione**.");
+});

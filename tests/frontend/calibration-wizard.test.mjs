@@ -950,7 +950,7 @@ test("dark pass: no colour darkened towards black applies on a dark theme withou
     for (const selector of selectors.split(/,(?![^(]*\))/).map((part) => part.trim())) {
       const base = selector.replace(/:hover|:not\(:disabled\)/g, "");
       const covered = [...cascadeCss.matchAll(/(?<=^|[{}])\s*(\[data-theme="dark"\][^{}@]+?)\s*\{([^{}]*)\}/g)]
-        .some(([, dark, body]) => /color: (?:var\(--panel-warning\)|color-mix\([^;]*(?:#fff|--primary-text-color))/.test(body)
+        .some(([, dark, body]) => /(?:^|[\s;])(?:color|--note-text): (?:var\(--panel-warning\)|color-mix\([^;]*(?:#fff|--primary-text-color))/.test(body)
           && dark.replace(/\[data-theme="dark"\] ?/g, "").replace(/:hover|:not\(:disabled\)/g, "").includes(base.replace(/^:is\(([^)]*)\)$/, "$1").split(",")[0].trim()));
       assert.ok(covered, `no dark counterpart for ${selector}`);
     }
@@ -991,7 +991,9 @@ test("L-69: the «Precision» tile takes its note's colours, green within the th
     const [good, goodNote, bad, badNote, plain] = host.children;
     for (const [tile, note, tone] of [[good, goodNote, "success"], [bad, badNote, "warning"]]) {
       assert.match(winner(tile, "background"), new RegExp(`--panel-${tone}\\) 8%`), `${theme}: ${tone} fill (the note itself has none, L-74)`);
-      assert.equal(winner(tile, "color"), winner(note, "color"), `${theme}: ${tone} text as its note`);
+      // L-127: a note's text is its `--note-text`.
+      assert.equal(winner(note, "color"), "var(--note-text)");
+      assert.equal(winner(tile, "color"), winner(note, "--note-text"), `${theme}: ${tone} text as its note`);
       assert.match(winner(tile, "box-shadow"), new RegExp(`--panel-${tone}`), `${theme}: ${tone} border`);
     }
     assert.equal(winner(good.firstElementChild, "color"), "inherit");
@@ -1195,47 +1197,57 @@ test("L-78: «the measurement state changed» is not shown once the session has 
   void panel;
 });
 
-test("L-80/L-82: notes by tone and theme: a 2 px solid bar, square; in light info and success are quotes with coloured text (L-89: the accent itself), warning (L-90: darkened text) and error boxed; in dark all quotes", () => {
+test("L-127 parity: every note and notice of the list, the wizard and their dialogs follows one recipe; light boxed, dark bar only; tones only change colours", () => {
   const doc = dom.window.document;
-  // [classes, tone token, light box?, light text, dark text]
+  const accentDark = "color-mix(in srgb, var(--panel-accent) 70%, var(--primary-text-color, #fff))";
+  const warningLight = "color-mix(in srgb, var(--panel-warning) 60%, #000)", warningDark = "color-mix(in srgb, var(--panel-warning) 70%, var(--primary-text-color, #fff))";
+  const successDark = "color-mix(in srgb, var(--panel-success) 70%, var(--primary-text-color, #fff))", text = "var(--primary-text-color, #182b37)";
+  // [classes|data-tone, host, tone token, light text, dark text]: Info, neutral info, Avviso, Successo, Errore.
   const notes = [
-    ["cal-note", "--panel-accent", false, "var(--panel-accent)", "color-mix(in srgb, var(--panel-accent) 70%, var(--primary-text-color, #fff))"],
-    ["cal-note cal-tab-help", "--panel-accent", false, "var(--panel-accent)", null],
-    ["cal-note wiz-subline", "--panel-accent", false, null, null],
-    ["cal-note is-success", "--panel-success", false, "var(--panel-success)", "color-mix(in srgb, var(--panel-success) 70%, var(--primary-text-color, #fff))"],
-    ["cal-note is-success wiz-result-note", "--panel-success", false, "var(--panel-success)", null],
-    ["notice cal-tab-done", "--panel-success", false, "var(--panel-success)", null],
-    ["cal-note is-warning", "--panel-warning", true, "color-mix(in srgb, var(--panel-warning) 60%, #000)", "color-mix(in srgb, var(--panel-warning) 70%, var(--primary-text-color, #fff))"],
-    ["cal-note is-warning wiz-readonly-note", "--panel-warning", true, null, null],
-    ["cal-note is-warning wiz-field-warning", "--panel-warning", true, null, null],
-    ["cal-note is-warning wiz-radio-warning", "--panel-warning", true, null, null],
-    ["cal-note is-warning cal-batch-note", "--panel-warning", true, null, null],
-    ["notice cal-tab-busy", "--panel-warning", true, "color-mix(in srgb, var(--panel-warning) 60%, #000)", "color-mix(in srgb, var(--panel-warning) 70%, var(--primary-text-color, #fff))"],
-    ["notice wiz-notice|warning", "--panel-warning", true, "color-mix(in srgb, var(--panel-warning) 60%, #000)", "color-mix(in srgb, var(--panel-warning) 70%, var(--primary-text-color, #fff))"],
-    ["notice error", "--panel-error", true, "var(--panel-error)", "var(--panel-error)"],
-    ["notice wiz-notice|error", "--panel-error", true, "var(--panel-error)", null],
+    ["cal-note", "cal-tab", "--panel-accent", "var(--panel-accent)", accentDark],
+    ["cal-note cal-tab-help", "cal-tab", "--panel-accent", "var(--panel-accent)", accentDark],
+    ["cal-note wiz-subline", "cal-tab", "--panel-accent", "var(--panel-accent)", accentDark],
+    ["cal-note wiz-radio-notice", "cal-tab", "--panel-accent", "var(--panel-accent)", accentDark],
+    ["notice wiz-notice|info", "cal-tab", "--panel-accent", text, text],
+    ["notice", "cal-tab", "--panel-accent", text, text],
+    ["cal-note is-warning", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["cal-note is-warning wiz-readonly-note", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["cal-note is-warning wiz-field-warning", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["cal-note is-warning cal-batch-note", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["notice cal-tab-busy", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["notice wiz-notice|warning", "cal-tab", "--panel-warning", warningLight, warningDark],
+    ["cal-note is-success", "cal-tab", "--panel-success", "var(--panel-success)", successDark],
+    ["cal-note is-success wiz-result-note", "cal-tab", "--panel-success", "var(--panel-success)", successDark],
+    ["notice cal-tab-done", "cal-tab", "--panel-success", "var(--panel-success)", successDark],
+    ["notice error", "cal-tab", "--panel-error", "var(--panel-error)", "var(--panel-error)"],
+    ["notice wiz-notice|error", "cal-tab", "--panel-error", "var(--panel-error)", "var(--panel-error)"],
+    ["notice error cal-abort-error", "dialog", "--panel-error", "var(--panel-error)", "var(--panel-error)"],
   ];
   for (const theme of ["light", "dark"]) {
-    const host = doc.createElement("div"); host.className = "cal-tab"; host.dataset.theme = theme; doc.body.append(host);
-    for (const [spec, tone, boxed, lightText, darkText] of notes) {
+    const list = doc.createElement("div"); list.className = "cal-tab"; list.dataset.theme = theme; doc.body.append(list);
+    const dialog = doc.createElement("dialog"); dialog.className = "cal-dialog"; list.append(dialog);
+    for (const [spec, host, tone, lightText, darkText] of notes) {
       const [className, dataTone] = spec.split("|");
-      const note = doc.createElement("p"); note.className = className; if (dataTone) note.dataset.tone = dataTone; host.append(note);
+      const note = doc.createElement("p"); note.className = className; if (dataTone) note.dataset.tone = dataTone;
+      (host === "dialog" ? dialog : list).append(note);
       const what = `${theme}: ${spec}`;
       assert.equal(winner(note, "--note-tone"), `var(${tone})`, `${what}: its tone`);
-      assert.equal(winner(note, "border-inline-start"), "2px solid var(--note-tone)", `${what}: a 2 px solid bar`);
+      assert.equal(winner(note, "--note-text"), theme === "light" ? lightText : darkText, `${what}: its text`);
+      assert.equal(winner(note, "color"), "var(--note-text)", `${what}: one colour rule`);
+      assert.equal(winner(note, "border-inline-start"), "2px solid var(--note-tone)", `${what}: a 2 px bar in the tone`);
       assert.equal(winner(note, "border-radius"), "0", `${what}: square`);
-      const box = theme === "light" && boxed;
-      if (box) {
-        assert.match(winner(note, "background"), new RegExp(`${tone}\\) \\d+%`), `${what}: tinted fill`);
-        assert.match(winner(note, "border"), new RegExp(`^1px solid color-mix\\(in srgb, var\\(${tone}\\)`), `${what}: a border all round`);
+      assert.equal(winner(note, "font-size"), "13px", `${what}: 13 px`);
+      if (theme === "light") {
+        assert.equal(winner(note, "background"), "color-mix(in srgb, var(--note-tone) 12%, transparent)", `${what}: the tone at 12 %`);
+        assert.equal(winner(note, "border"), "1px solid color-mix(in srgb, var(--note-tone) 45%, transparent)", `${what}: 1 px at 45 % on the other sides`);
+        assert.equal(winner(note, "padding"), "8px 12px", what);
       } else {
         assert.equal(winner(note, "background"), "none", `${what}: no fill`);
         assert.equal(winner(note, "border"), "0 solid transparent", `${what}: no other side`);
+        assert.equal(winner(note, "padding"), "4px 0 4px 12px", what);
       }
-      const text = theme === "light" ? lightText : darkText;
-      if (text) assert.equal(winner(note, "color"), text, `${what}: text colour`);
     }
-    host.remove();
+    list.remove();
   }
   // No icon in a note: the tab draws none any more, and one left over is not shown.
   const host = doc.createElement("div"); host.className = "cal-tab"; host.innerHTML = '<p class="notice cal-tab-busy"><ha-icon></ha-icon><span></span></p>'; doc.body.append(host);
@@ -1539,9 +1551,10 @@ test("L-84/L-85/L-88: the phone bar on the steps strip's surface, no bar on the 
     const [info, success, error, warning] = box.children;
     const bar = (note) => winner(note, "border-inline-start-color") || "var(--note-tone)";
     if (theme === "light") {
-      assert.equal(bar(info), winner(info, "color"), "light info: bar as text");
-      assert.equal(bar(success), winner(success, "color"), "light success: bar as text");
-      assert.equal(winner(error, "color"), "var(--panel-error)");
+      // L-127: the tone and the text are the same token for info, success and error.
+      assert.equal(winner(info, "--note-tone"), winner(info, "--note-text"), "light info: bar as text");
+      assert.equal(winner(success, "--note-tone"), winner(success, "--note-text"), "light success: bar as text");
+      assert.equal(winner(error, "--note-text"), "var(--panel-error)");
       assert.equal(winner(error, "border-inline-start"), "2px solid var(--note-tone)");
     } else {
       assert.equal(bar(info), "var(--note-tone)", "dark: the tone's colour, as before");
@@ -4074,7 +4087,7 @@ test("A-08b advises repeating: «Repeat the run» is the primary, «Ignore and c
   assert.match(wiz().querySelector(".wiz-body").textContent, /^The reading is recorded/);
   assert.equal(wiz().querySelector(".wiz-illustration"), null, "no drawing of the reading");
   const css = (await import("node:fs")).readFileSync(new URL("../../custom_components/myhome/frontend/panel/myhome-panel.css", import.meta.url), "utf8");
-  assert.match(css, /\[data-theme="dark"\] \.wiz-notice\[data-tone="warning"\][^{]*\{ color: color-mix\(in srgb, var\(--panel-warning\) 70%/);
+  assert.match(css, /\[data-theme="dark"\] :is\(\.cal-note\.is-warning, :is\(\.cal-tab, dialog\.cal-dialog\) \.notice:is\(\.cal-tab-busy, \[data-tone="warning"\]\)\) \{ --note-text: color-mix\(in srgb, var\(--panel-warning\) 70%/);
 });
 
 test("C-03 asks about the slats with the answer of the last calibration preselected (G4-5)", () => {

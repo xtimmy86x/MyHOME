@@ -4491,3 +4491,14 @@ test("L-123: after a real save the stepper line names the last step completed, a
   assert.match(c.stepper.line, /^Riepilogo · (\d+) di \1$/, "a path without fine-tuning: the last of its steps");
   assert.doesNotMatch(`${a.stepper.line} ${c.stepper.line}`, /fuori dai passi/);
 });
+
+test("L-126: in the steps only the current label is in the text colour, semibold; done and future ones grey, regular", async () => {
+  const css = (await import("node:fs")).readFileSync(new URL("../../custom_components/myhome/frontend/panel/myhome-panel.css", import.meta.url), "utf8");
+  // The list's own rule (0,1,2) used to outweigh the state's (0,1,1): the current label was grey as well.
+  assert.match(css, /\.wiz-steps ol > li, \.wiz-sheet-steps ol > li \{[^}]*color: var\(--panel-text-2\); \}/, "the list's grey");
+  assert.match(css, /:is\(\.wiz-steps, \.wiz-sheet-steps\) ol > li\[data-step-state="current"\] \{ color: var\(--primary-text-color, #182b37\); \}/, "the current label, at the list's weight");
+  assert.match(css, /:is\(\.wiz-steps, \.wiz-sheet-steps\) ol > li:is\(\[data-step-state="done"\], \[data-step-state="future"\]\) \{ color: var\(--panel-text-2\); \}/);
+  assert.match(css, /li\[data-step-state="current"\] > \.wiz-step-label \{ font-weight: 600; \}/, "semibold");
+  assert.match(css, /:is\(\.wiz-steps, \.wiz-sheet-steps\)\[data-interrupted\] ol > li\[data-step-state\] \{ color: var\(--panel-text-2\); \}/, "an interrupted session stays grey");
+  assert.ok(css.indexOf(':is(.wiz-steps, .wiz-sheet-steps) ol > li[data-step-state="current"]') > css.indexOf(".wiz-steps ol > li, .wiz-sheet-steps ol > li {"), "after the list's rule");
+});

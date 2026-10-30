@@ -1249,10 +1249,17 @@ li[data-step-state="done"] > .wiz-step-mark { border-color: var(--panel-accent);
 li[data-step-state="current"] > .wiz-step-mark, .wiz-dot { border: 1.5px solid var(--panel-accent); background: linear-gradient(90deg, var(--panel-accent) 50%, transparent 50%); }
 li[data-step-state="current"], li[data-step-state="done"] { color: var(--primary-text-color, #182b37); }
 li[data-step-state="current"] > .wiz-step-label { font-weight: 600; }
+/* L-126 (the owner's Figma frame 965:31953): in the steps (column and sheet) only the current step's label is in the
+   text colour, semibold; the steps done and the steps ahead are grey and regular (the marks tell them apart). Written
+   on the list's own selector: the state alone (`li[data-step-state]`) never outweighed `.wiz-steps ol > li`, so the
+   current label was grey too. The wait's stages keep the rule above. */
+:is(.wiz-steps, .wiz-sheet-steps) ol > li[data-step-state="current"] { color: var(--primary-text-color, #182b37); }
+:is(.wiz-steps, .wiz-sheet-steps) ol > li:is([data-step-state="done"], [data-step-state="future"]) { color: var(--panel-text-2); }
 /* M3-3: an ended session: the step it reached stays, greyed. */
 [data-interrupted] li[data-step-state="current"] > .wiz-step-mark, .wiz-compact[data-interrupted] .wiz-dot { border-color: var(--panel-text-2);
   background: linear-gradient(90deg, var(--panel-text-2) 50%, transparent 50%); }
-[data-interrupted] li[data-step-state="current"], [data-interrupted] li[data-step-state="done"] { color: var(--panel-text-2); }
+[data-interrupted] li[data-step-state="current"], [data-interrupted] li[data-step-state="done"],
+  :is(.wiz-steps, .wiz-sheet-steps)[data-interrupted] ol > li[data-step-state] { color: var(--panel-text-2); }
 .wiz-steps ul, .wiz-sheet-steps ul { grid-column: 2; list-style: none; margin: 4px 0 2px; padding: 0; font-size: 12px; color: var(--panel-text-2); display: grid; gap: 2px; }
 .wiz-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; padding: 20px; min-width: 0; }
 .wiz-title { margin: 0; font-size: 18px; font-weight: 600; outline: none; }

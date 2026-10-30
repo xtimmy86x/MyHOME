@@ -189,11 +189,12 @@ export function buildScreen(ctx) {
         : measured ? [] : list.map(describe))];
     const options = [
       { value: "A", label: label.A, note: [t("wiz_T452")] },
-      // Review P1: a preview stays visible, disabled, saying when it comes. L-115: said in a yellow note under its title.
-      { value: "B", label: label.B, disabled: !profiles || !previews, note: bNote, ...(previews ? {} : { notice: t("wiz_T584") }) },
+      // Review P1: a preview stays visible, disabled, saying when it comes. L-124: a feature not shipped yet is a blue
+      // information note under its title (yellow is for the measurements' warnings only).
+      { value: "B", label: label.B, disabled: !profiles || !previews, note: bNote, ...(previews ? {} : { notice: t("wiz_T584"), noticeTone: "info" }) },
       // Fine-tuning corrects values a cover already has: never on a cover never measured.
-      // L-115: why it cannot be chosen, in a yellow note under its title.
-      { value: "C", label: label.C, note: [t("wiz_T454")], ...(measured ? {} : { disabled: true, notice: t("wiz_T423") }) },
+      // L-124: a condition the user can meet is the option's plain grey caption, under its title.
+      { value: "C", label: label.C, note: [t("wiz_T454")], ...(measured ? {} : { disabled: true, caption: t("wiz_T423") }) },
     ].map((option) => ({ ...option, badge: option.value === advice.badge && !option.disabled ? t("wiz_T400") : "" }));
     // Preselected on the badge, Continue is ready; without a badge nothing is chosen and Continue waits.
     const enabled = (value) => options.some((option) => option.value === value && !option.disabled);
@@ -263,7 +264,7 @@ export function buildScreen(ctx) {
     const value = previews ? local.scope || "points_only" : local.scope && local.scope !== "points_only" ? local.scope : "";
     Object.assign(screen, { code: "C-02", phase: "intro", title: t("wiz_T189"), body: previews ? `${t("wiz_T190")}\n\n${t("wiz_T548")}` : t("wiz_T190"),
       choice: { name: "case", kind: "radio", label: t("wiz_T191"), value,
-        options: [previews ? { value: "points_only", label: t("wiz_T193"), badge: t("wiz_T400") } : { value: "points_only", label: t("wiz_T193"), disabled: true, warning: t("wiz_T584") },
+        options: [previews ? { value: "points_only", label: t("wiz_T193"), badge: t("wiz_T400") } : { value: "points_only", label: t("wiz_T193"), disabled: true, notice: t("wiz_T584"), noticeTone: "info" },
           { value: "times_only", label: t("wiz_T194") }, { value: "times_and_rolls", label: t("wiz_T196") }] },
       actions: [{ id: "case", label: t("wiz_T006"), kind: "primary", disabled: !value }] });
     return finish();

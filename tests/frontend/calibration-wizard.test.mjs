@@ -3475,8 +3475,8 @@ test("A-02 advises a path from the cover and the gateway's profiles, and presele
   assert.equal(none.subline, "Never calibrated", "the context says only that");
   assert.match(none.body, /If in doubt, choose this option\.$/);
   const c = none.choice.options.find((option) => option.value === "C");
-  assert.deepEqual([c.disabled, c.note, c.notice], [true, ["Only what is off gets corrected: tape readings, times, or everything."], "Calibrate the cover first."],
-    "no fine-tuning on a cover never measured: said in its yellow note (L-115)");
+  assert.deepEqual([c.disabled, c.note, c.caption, c.notice], [true, ["Only what is off gets corrected: tape readings, times, or everything."], "Calibrate the cover first.", undefined],
+    "no fine-tuning on a cover never measured: said as its grey caption (L-124)");
   // G2-2: the introduction is one line and the advice; each option explains itself in its note.
   assert.equal(none.body, 'There are **three measurement paths**.\n\n"First cover of its type" is the recommended option because the cover has never been measured and there are no saved profiles. If in doubt, choose this option.');
   assert.deepEqual(none.choice.options.map((option) => option.note[0]), [translations.en.wiz_T452, translations.en.wiz_T453, translations.en.wiz_T454]);
@@ -3528,7 +3528,8 @@ test("review P1: with the previews off, A-02 never advises nor preselects a prev
   const caseOff = buildScreen({ t, stage: "case", path: "C", cover: { ...cover, status: "calibrated" }, previews: false });
   assert.deepEqual([option(caseOff, "points_only").disabled, option(caseOff, "points_only").badge ?? "", caseOff.choice.value, caseOff.actions[0].disabled],
     [true, "", "", true]);
-  assert.equal(option(caseOff, "points_only").warning, "Available in a future version", "L-115: at its place, as a yellow note");
+  assert.deepEqual([option(caseOff, "points_only").notice, option(caseOff, "points_only").noticeTone, option(caseOff, "points_only").warning],
+    ["Available in a future version", "info", undefined], "L-124: under its title, as a blue information note");
   assert.equal(caseOff.body, translations.en.wiz_T190, "no sentence advising the tape readings");
   const caseOn = buildScreen({ t, stage: "case", path: "C", cover: { ...cover, status: "calibrated" }, previews: true });
   assert.deepEqual([option(caseOn, "points_only").disabled ?? false, caseOn.choice.value], [false, "points_only"]);
@@ -3544,17 +3545,18 @@ test("review P1: with the previews off, A-02 never advises nor preselects a prev
   assert.equal(code(), "A-02", "path B does not start");
 });
 
-test("L-115: why an option cannot be chosen is a yellow note right under its title, at full strength on the disabled option", async () => {
+test("L-115/L-124: why an option cannot be chosen is right under its title: a blue note for a feature not shipped, the grey caption for a condition to meet", async () => {
   const { tab, wiz, press, pickCover } = await mount({ previews: false });
   tab().querySelector('[data-action="cal-tab-measure"]').click(); await tick();
   await pickCover("cover.living_one");
   await press("choose");
-  for (const [value, text] of [["B", "Available in a future version"], ["C", "Calibrate the cover first."]]) {
+  for (const [value, text, kind] of [["B", "Available in a future version", "cal-note wiz-radio-notice"], ["C", "Calibrate the cover first.", "muted wiz-radio-caption"]]) {
     const label = wiz().querySelector(`input[name="path"][value="${value}"]`).closest(".wiz-radio");
-    const note = label.querySelector(".wiz-radio-notice");
-    assert.deepEqual([note?.className, note?.textContent], ["cal-note is-warning wiz-radio-notice", text], value);
+    const note = label.querySelector(".wiz-radio-notice, .wiz-radio-caption");
+    assert.deepEqual([note?.className, note?.textContent], [kind, text], value);
+    assert.equal(label.querySelector(".is-warning"), null, `${value}: no yellow (it is not a measurement's warning)`);
     const parts = [...label.querySelector(".wiz-radio-text").children].map((child) => child.className.split(" ").pop() || child.tagName.toLowerCase());
-    assert.deepEqual(parts.slice(0, 2), ["wiz-radio-label", "wiz-radio-notice"], `${value}: under the title, before what it does (${parts})`);
+    assert.deepEqual(parts.slice(0, 2), ["wiz-radio-label", kind.split(" ").pop()], `${value}: under the title, before what it does (${parts})`);
     assert.equal(label.classList.contains("is-disabled"), true);
   }
   const css = (await import("node:fs")).readFileSync(new URL("../../custom_components/myhome/frontend/panel/myhome-panel.css", import.meta.url), "utf8");

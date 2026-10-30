@@ -1619,7 +1619,7 @@ function barParts(screen) {
   const slotAction = screen.actions.find((action) => STOP_SLOT.includes(action.id));
   const barActions = screen.actions.filter((action) => !STOP_SLOT.includes(action.id));
   return { readOnlyKey, slotAction, barActions,
-    signature: JSON.stringify([barActions.map((action) => [action.id, action.label, action.kind, action.note]), !!slotAction, readOnlyKey]) };
+    signature: JSON.stringify([barActions.map((action) => [action.id, action.label, action.kind, action.note, !!action.visible]), !!slotAction, readOnlyKey]) };
 }
 /**
  * L-121: the cover's position from Home Assistant, only when it is a number from 0 to 100 that agrees with the state;

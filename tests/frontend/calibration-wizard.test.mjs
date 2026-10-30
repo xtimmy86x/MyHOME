@@ -4515,3 +4515,17 @@ test("L-126: in the steps only the current label is in the text colour, semibold
   assert.match(css, /:is\(\.wiz-steps, \.wiz-sheet-steps\)\[data-interrupted\] ol > li\[data-step-state\] \{ color: var\(--panel-text-2\); \}/, "an interrupted session stays grey");
   assert.ok(css.indexOf(':is(.wiz-steps, .wiz-sheet-steps) ol > li[data-step-state="current"]') > css.indexOf(".wiz-steps ol > li, .wiz-sheet-steps ol > li {"), "after the list's rule");
 });
+
+test("L-125: the bar is drawn again when an action moves in or out of view, its id and label unchanged", async () => {
+  const { panel, wiz, startFor } = await mount({ previews: false });
+  await startFor("cover.living_one");
+  const wizard = panel._calibrationTab._wizard;
+  const bar = () => [[...wiz().querySelectorAll(".wiz-actions > .wiz-action")].map((item) => item.dataset.wiz),
+    [...wiz().querySelectorAll(".wiz-actions .wiz-more-list .wiz-action")].map((item) => item.dataset.wiz)];
+  Object.assign(wizard._local, { stage: "saved", saved: { target: "profile_new", name: "living_room_shutter_1" } });
+  wizard._render(); await tick();
+  assert.deepEqual(bar(), [["close", "assign-profile"], ["another", "open-cover"]]);
+  wizard._local.saved.target = "profile_update";
+  wizard._render(); await tick();
+  assert.deepEqual(bar(), [["close"], ["assign-profile", "another", "open-cover"]]);
+});

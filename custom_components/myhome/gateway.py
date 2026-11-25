@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable, Iterable
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
     CONF_HOST,
@@ -24,9 +24,10 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
 from OWNd.connection import OWNCommandSession, OWNEventSession, OWNGateway, OWNSession
-from OWNd.message import OWNCommand
+from OWNd.message import OWNCommand, OWNHeatingCommand
 from OWNd.profiles import GenericGatewayProfile, get_gateway_profile
 
+from .actuator_lock import ActuatorLockManager
 from .bus_monitor import BusMonitor
 from .const import (
     BUS_ROUTING,
@@ -310,6 +311,13 @@ KNOB_READ_IN_SILENT_ZONE_POLL = frozenset({"F455"})
 # this table is the fallback for ``GenericGatewayProfile`` / brand-prefixed model strings and
 # ``None`` (unverified) profile flags.
 ACTUATOR_REQUEST_REFUSED = frozenset({"F453", "F453AV", "H4684", "MH200", "MH200N", "MH202"})
+# Of those six, the gateways whose firmware drops the actuator form too (``*#4*Z#N*20##``): the
+# same suite's ``*#4*1#1*20##`` row is "silent" on H4684 and MH200 only. F453, F453AV and MH200N
+# put it on the bus (``$0499813110``, "nack / out": no device on the emulated bus) and the MH202
+# acknowledges it ("ack / out"); thermo-zone-requests.tsv has the same split for ``*#4*2#1*20##``.
+# Emulated firmware only: no physical capture of that read exists for those four, so a read
+# they leave unanswered ends the silent-zone poll like any other (it is the poll's last read).
+ACTUATOR_FORM_REQUEST_REFUSED = frozenset({"H4684", "MH200"})
 # Gateways that refuse the zone form of that request at once but answer the actuator form
 # (``*#4*Z#N*20##``): a physical F455 1.0.76 NACKed *#4*2*20##, *#4*4*20##, *#4*3*20## and
 # *#4*0*20## in 2-18 ms and answered *#4*2#1*20## / *#4*4#1*20## / *#4*3#1*20## in ~0.09 s
@@ -397,8 +405,8 @@ KNOWN_GATEWAY_MODELS = frozenset(
 # WHO 2 SCS pre-move STOP behavior (#959): 11 of 12 emulated Linux automation gateways
 # (5 bt_luci + 6 coso libplug_automation_tr.so) synthesize a 2-telegram SCS sequence
 # ($03<W>00120A STOP + $03<W>001208/1209 UP/DOWN) for *2*1*W## / *2*2*W## (firmware_oracle.json
-# and mcp_index.json). MH202 (010024, older coso without pre-STOP) and bare-metal MH201 (3.3.6,
-# live plant trace) emit only the single direction telegram, so energized timed relay actuators
+# and mcp_index.json). MH202 (010024, older coso without pre-STOP) and bare-metal MH201 (3.3.6
+# live plant trace; also confirmed on 3.6.44) emit only the single direction telegram, so energized timed relay actuators
 # (L4671/2, F411/2, F411/4, F411U2) stop instead of reversing unless HA stops first.
 COVER_PRE_MOVE_STOP_EMITTED = frozenset(
     {"3488", "F453", "F453AV", "F454", "F459", "F460", "F461", "H4684", "MH200", "MH200N", "MYHOMESERVER1"}
@@ -489,20 +497,32 @@ def _validate_zone_where(where: str) -> str:
     A one-digit interface is written with two (``3#4#1`` -> ``3#4#01``), as the frames on
     the wire and the configuration validator spell it. Anything else would change the
     frame's grammar: ``2*22`` would turn a dimension 20 request into ``*#4*2*22*20##``, a
-    dimension 22 write; ``2##`` ends the frame early. The builder of OWNd#140
-    (``OWNHeatingCommand.actuators_status``) accepts and rejects the same addresses.
+    dimension 22 write; ``2##`` ends the frame early. Same grammar as the builder of OWNd#140
+    (``OWNHeatingCommand.actuators_status``), with two differences on purpose: the builder
+    refuses the one-digit interface this function completes (``3#4#1``), and it strips
+    surrounding whitespace, which is refused here (`` 2``, and ``2\n``: the whole string has
+    to match, ``$`` alone would let a trailing newline into the frame).
     """
     zone, routing, interface = (where or "").rpartition(BUS_ROUTING)
     if routing and len(interface) == 1 and interface.isdigit():
         where = f"{zone}{routing}{interface.zfill(2)}"
-    if not _ZONE_WHERE.match(where or ""):
+    if not _ZONE_WHERE.fullmatch(where or ""):
         raise ValueError(f"Invalid zone address: {where!r}")
     return where
 
 
 def _zone_request_frame(where: str, dimension: int) -> str:
-    """The dimension request of one zone (``*#4*WHERE*DIM##``), validated like a builder."""
-    return f"*#4*{_validate_zone_where(where)}*{dimension}##"
+    """The dimension request of one zone (``*#4*WHERE*DIM##``), validated like a builder.
+
+    Dimension 20 is built by OWNd (``OWNHeatingCommand.actuators_status``, OWNd#140, in the
+    pinned 2.0.1), as #792 planned once it was released. Dimensions 11, 19 and 60 have no OWNd
+    builder that takes a zone behind an interface, so they keep the string and this module's
+    copy of the address grammar.
+    """
+    where = _validate_zone_where(where)
+    if dimension == 20:
+        return str(OWNHeatingCommand.actuators_status(where))
+    return f"*#4*{where}*{dimension}##"
 
 
 def _is_zone_level_where(where: str) -> bool:
@@ -518,6 +538,10 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
     # ``__init__`` reads them too.
     _central_season: str | None = None
     central_season_changed_at: float | None = None
+    central_season_learned_at: float | None = None
+    _auth_refused: bool = False
+    _auth_refused_session: str | None = None
+    _cancel_listener_handle: asyncio.Handle | None = None
 
     def __init__(
         self,
@@ -553,6 +577,10 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         self._failover_active = False
         self._setup_at = time.monotonic()
         self._unavailable_timer: CALLBACK_TYPE | None = None
+        # Set when the gateway refused the stored password while the entry was loaded.
+        self._auth_refused = False
+        self._auth_refused_session: str | None = None
+        self._cancel_listener_handle: asyncio.Handle | None = None
         self.listening_worker: asyncio.Task[None] | None = None
         self.bus_monitor = BusMonitor()
         self.device_health = DeviceHealth(self)
@@ -567,6 +595,10 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         # it has only been learned. Its zones follow a change one after the other, so none is
         # compared with the new season at once (climate ``CENTRAL_SEASON_SETTLE``).
         self.central_season_changed_at = None
+        # When a season was last stored that differs from the one held (``time.monotonic()``):
+        # learned from None (also after a reconnect) or changed; None until the first one. It
+        # tells the central unit's entity which of its own report and this season is newer.
+        self.central_season_learned_at = None
 
         self._who13: dict[str, Any] = {
             "code": None, "model": None, "model_official": None, "model_observed": None,
@@ -583,6 +615,7 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         self._event_dispatcher = GatewayEventDispatcher(self)
         self._resync_manager = LightingResyncManager(self)
         self._echo_watchdog = LightEchoWatchdog(self)
+        self._actuator_locks = ActuatorLockManager(self)
         self._event_runner = EventSessionRunner(self)
         self._command_pool = CommandWorkerPool(
             self,
@@ -598,6 +631,8 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         # Told of every automation (WHO 2) status request sent through this handler, once queued, so that a
         # calibration run can tell the actuator's reply to a request from the motor stopping.
         self.automation_status_listeners: set[Callable[[OWNCommand], None]] = set()
+        # Event sessions opened so far (counted when the session comes up after being down).
+        self.event_connections = 0
         # Paced sweeps in flight; close_listener() bumps the epoch so a sweep that was
         # running at the time cannot end one started after the reconnect.
         self._active_sweeps: int = 0
@@ -634,6 +669,8 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
     def central_season(self, season: str | None) -> None:
         if season is not None and self._central_season is not None and season != self._central_season:
             self.central_season_changed_at = time.monotonic()
+        if season is not None and season != self._central_season:
+            self.central_season_learned_at = time.monotonic()
         self._central_season = season
 
     @property
@@ -816,6 +853,23 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
             return not supported
         return self._model_key in ACTUATOR_REQUEST_REFUSED
 
+    @property
+    def actuator_form_request_refused(self) -> bool:
+        """Whether this gateway drops the actuator form of the request too (``*#4*Z#N*20##``)."""
+        return self._model_key in ACTUATOR_FORM_REQUEST_REFUSED
+
+    def actuator_read_refused(self, where: str) -> bool:
+        """Whether the dimension 20 read of ``where`` is not sent, by the form ``where`` takes.
+
+        A zone (``Z``) is the zone form, refused where ``actuator_request_refused`` or
+        ``zone_actuator_request_refused`` says so; an actuator (``Z#N``) is refused only where
+        ``actuator_form_request_refused`` does. Decided by the gateway the read goes through.
+        """
+        target = self._who4_target()
+        if _is_zone_level_where(where):
+            return target.actuator_request_refused or target.zone_actuator_request_refused
+        return target.actuator_form_request_refused
+
     def all_zone_request(self, dimension: int) -> str | None:
         """The single request this gateway answers with every zone's ``dimension``, if any."""
         return ALL_ZONE_REQUESTS.get(self._model_key, {}).get(dimension)
@@ -897,10 +951,22 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
                         if not wheres:
                             continue
                 if dimension == 20 and target.actuator_request_refused:
-                    LOGGER.debug(
-                        "%s Zones %s: %s refuses the actuator request; not asking", self.log_id, wheres, target.model
+                    # The zone form is dropped; an actuator named by a thermo switch (``Z#N``)
+                    # is still asked where the firmware forwards that form.
+                    asked = (
+                        []
+                        if target.actuator_form_request_refused
+                        else [where for where in wheres if not _is_zone_level_where(where)]
                     )
-                    continue
+                    LOGGER.debug(
+                        "%s Zones %s: %s refuses the actuator request; not asking",
+                        self.log_id,
+                        [where for where in wheres if where not in asked],
+                        target.model,
+                    )
+                    if not asked:
+                        continue
+                    wheres = asked
                 if dimension == 60 and target.humidity_request_refused:
                     LOGGER.debug(
                         "%s Zones %s: %s refuses the humidity request; not asking", self.log_id, wheres, target.model
@@ -1002,10 +1068,16 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         return None
 
     async def wait_for_zone_requests(self) -> None:
-        """Let same-turn zone dimension requests coalesce and wait for their paced run."""
+        """Let same-turn zone dimension requests coalesce and wait for their paced run.
+
+        The run is shared by every zone, so a waiter only watches it: ``asyncio.wait`` leaves
+        the task alone when the waiter is cancelled (a climate entity removed during its
+        startup poll), where ``asyncio.gather`` cancels what it awaits and would drop the
+        other zones' frames with it. Same form as ``_wait_for_write``.
+        """
         await asyncio.sleep(0)
-        while self._zone_request_task is not None and not self._zone_request_task.done():
-            await asyncio.gather(self._zone_request_task, return_exceptions=True)
+        while (task := self._zone_request_task) is not None and not task.done():
+            await asyncio.wait({task})
 
     def _has_status_consumer(self, message: OWNCommand) -> bool:
         """Whether ``send_status_request(message)`` has an active worker, target, or test double."""
@@ -1093,9 +1165,10 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
     def silent_zone_actuator_read_refused(self) -> bool:
         """Whether the silent-zone poll leaves the actuator read (``*#4*Z#1*20##``) out.
 
-        ``actuator_request_refused`` of the gateway the reads go through (``_who4_target``).
+        ``actuator_form_request_refused`` of the gateway the reads go through (``_who4_target``):
+        the read is the actuator form, which more gateways forward than the zone form.
         """
-        return self._who4_target().actuator_request_refused
+        return self._who4_target().actuator_form_request_refused
 
     @property
     def zone_temperature_poll_needed(self) -> bool:
@@ -1161,6 +1234,12 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
     @callback
     def _on_event_connection_state_change(self, connected: bool) -> None:
         """Gate commands and publish sustained event-session availability."""
+        if connected and (self._auth_refused or self._terminate_listener):
+            # A late reconnect callback arriving after auth refusal or shutdown must not
+            # flip availability back on while sessions are torn down.
+            self.is_connected = False
+            self._event_runner.is_connected = False
+            return
         was_connected = self.is_connected
         self.is_connected = connected
         self._event_runner.is_connected = connected
@@ -1191,6 +1270,7 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
                 self._all_actuators_swept_at = 0.0
                 self._central_status_swept_at = 0.0
                 self.central_season = None
+                self.event_connections += 1
             if not was_connected and self._initial_discovery_done.is_set():
                 runtime = getattr(self.config_entry, "runtime_data", None)
                 expose_mgr = getattr(runtime, "expose_manager", None)
@@ -1218,8 +1298,83 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
             )
 
     @callback
-    def _mark_unavailable(self, _now: Any) -> None:
-        """Mark the gateway unavailable after the reconnect grace period."""
+    def _on_auth_refused(self, reason: str | None, session: str) -> None:
+        """The gateway refused the stored password while the entry is loaded.
+
+        Setup answers this with ``ConfigEntryAuthFailed``; here the entry is already
+        loaded, so the reauth flow is started by hand (OWNd's ``on_auth_error`` was
+        added for this, OpenWebNet-HA/OWNd#132). Both sessions stop for good: a refused
+        password is never presented again, by either session, until the user has
+        entered a new one and the entry reloads. An HMAC gateway disables its
+        authentication service after 3 failed handshakes in 60 s
+        (OpenWebNet Encyclopedia ``protocol/authentication.md``, HMAC Simple
+        Authentication Mode).
+        """
+        if self._auth_refused or self._terminate_listener:
+            return
+        self._auth_refused = True
+        self._auth_refused_session = session
+        LOGGER.error(
+            "%s The gateway refused the OpenWebNet password (%s) on the %s session. "
+            "Both sessions are stopped so that it is not presented again; "
+            "enter the password in the re-authentication prompt.",
+            self.log_id,
+            reason or "password_error",
+            session,
+        )
+        self._command_pool.stop_after_auth_refusal()
+        self._event_runner.close()
+        listener = self.listening_worker
+        # The hook can run inside the listener itself: it is then cancelled from the loop.
+        reported_by_listener = listener is asyncio.current_task()
+        if listener is not None and not listener.done():
+            # Blocked in get_next() on a session that may still be open (a refusal on the
+            # command session only): a drop would make OWNd log in again from inside it.
+            # Repeated: OWNd suppresses one CancelledError while it recycles a socket.
+            if reported_by_listener:
+                listener.add_done_callback(self._clear_cancel_listener_handle)
+                self._cancel_listener_handle = self.hass.loop.call_soon(
+                    self._cancel_listener, listener
+                )
+            else:
+                self._cancel_listener(listener)
+        # Nothing recovers without the user, so no reconnect grace period.
+        self.is_connected = False
+        self._event_runner.is_connected = False
+        self._mark_unavailable(None, auth_refused=True)
+        entry = getattr(self, "config_entry", None)
+        if entry is None or entry.state is ConfigEntryState.UNLOAD_IN_PROGRESS:
+            return
+        entry.async_start_reauth(self.hass)
+
+    @callback
+    def _clear_cancel_listener_handle(self, _task: Any = None) -> None:
+        """Cancel any pending listener-cancel repeat timer."""
+        if self._cancel_listener_handle is not None:
+            self._cancel_listener_handle.cancel()
+            self._cancel_listener_handle = None
+
+    @callback
+    def _cancel_listener(self, listener: asyncio.Task[None], attempt: int = 0) -> None:
+        """Cancel the stopped event listener until it has ended or entered session cleanup (bounded)."""
+        if listener.done() or self._event_runner._closing_session or attempt >= 60:
+            self._clear_cancel_listener_handle()
+            return
+        if attempt == 0 and self._cancel_listener_handle is None:
+            listener.add_done_callback(self._clear_cancel_listener_handle)
+        listener.cancel()
+        if attempt < 10:
+            self._cancel_listener_handle = self.hass.loop.call_soon(
+                self._cancel_listener, listener, attempt + 1
+            )
+        else:
+            self._cancel_listener_handle = self.hass.loop.call_later(
+                0.1, self._cancel_listener, listener, attempt + 1
+            )
+
+    @callback
+    def _mark_unavailable(self, _now: Any, *, auth_refused: bool = False) -> None:
+        """Mark the gateway unavailable after the reconnect grace period or an auth refusal."""
         if self._unavailable_timer is not None:
             self._unavailable_timer()
             self._unavailable_timer = None
@@ -1230,11 +1385,12 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         if self.available:  # carried by the warm standby; refresh entities whose standby coverage differs
             async_dispatcher_send(self.hass, self.availability_signal)
             return
-        LOGGER.warning(
-            "%s Gateway unavailable (outage exceeded %ss).",
-            self.log_id,
-            AVAILABILITY_GRACE,
-        )
+        if not (auth_refused or self._auth_refused):
+            LOGGER.warning(
+                "%s Gateway unavailable (outage exceeded %ss).",
+                self.log_id,
+                AVAILABILITY_GRACE,
+            )
         self._notify_availability()
 
     @callback
@@ -1244,7 +1400,11 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
 
     async def listening_loop(self) -> None:
         """Run the event session, recreating it whenever it dies or stalls."""
-        await self._event_runner.listening_loop()
+        try:
+            await self._event_runner.listening_loop()
+        except asyncio.CancelledError:
+            if not self._ended_by_auth_refusal():
+                raise
 
     def profile_supports_who(self, who: int) -> bool:
         """Return whether the startup sweep asks this gateway's profile about a WHO."""
@@ -1290,7 +1450,27 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
 
     async def sending_loop(self, worker_id: int) -> None:
         """Run sending loop for worker."""
-        await self._command_pool.sending_loop(worker_id)
+        try:
+            await self._command_pool.sending_loop(worker_id)
+        except asyncio.CancelledError:
+            if not self._ended_by_auth_refusal():
+                raise
+
+    def _ended_by_auth_refusal(self) -> bool:
+        """A listener or worker cancelled by ``_on_auth_refused`` ends normally.
+
+        The refusal stops both sessions by cancelling their tasks; that is the
+        intended end of the task, not an outside cancellation, so whoever awaits
+        it sees it finish instead of a ``CancelledError``.
+        """
+        if not self._auth_refused:
+            return False
+        task = asyncio.current_task()
+        if task is None or (task is not self.listening_worker and task not in self.sending_workers):
+            return False
+        while task.cancelling():
+            task.uncancel()
+        return True
 
     @property
     def initial_discovery_pending(self) -> bool:
@@ -1579,8 +1759,12 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         LOGGER.info("%s Closing event listener", self.log_id)
         if self._unavailable_timer is not None:
             self._unavailable_timer()
+        self._clear_cancel_listener_handle()
         self._resync_manager.cancel_all()
         self._echo_watchdog.cancel_all()
+        if isinstance(self._actuator_locks, ActuatorLockManager):
+            self._actuator_locks.evacuate_secondary_entities()
+            self._actuator_locks.clear()
         if self._zone_request_task is not None:
             self._zone_request_task.cancel()
             self._zone_request_task = None
@@ -1633,11 +1817,15 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         """Queue a command; the returned future resolves to the monotonic write time."""
         delegated = self._delegated_target(message)
         if delegated is not None:
+            # Read by ``command_in_flight``: the gateway that writes it, whatever the options say later.
+            setattr(message, "_myhome_handed_to", delegated)
             if is_cancel:
                 return await delegated.send(message, is_cancel=True)
             return await delegated.send(message)
         standby = self._failover_target(message)
         if standby is not None:
+            # Read by ``command_in_flight``: the gateway that writes it, whatever the options say later.
+            setattr(message, "_myhome_handed_to", standby)
             if is_cancel:
                 return await standby.send(message, is_cancel=True)
             return await standby.send(message)
@@ -1671,6 +1859,23 @@ class MyHOMEGatewayHandler(GatewayTopologyMixin, GatewayIdentityMixin):
         if standby is not None:
             return await standby.send_status_request(message)
         return await self._command_pool.send_status_request(message)
+
+    def command_in_flight(self, message: Any) -> bool:
+        """Whether ``message`` is being written right now (it may be on the wire).
+
+        By this gateway's command pool, or by the pool of the gateway ``send`` handed it to (the
+        secondary of a delegated WHO, the warm standby). Both are looked at whatever is connected
+        now: the command was routed when it was sent, and the same object is in no other pool.
+        """
+        pools = [getattr(self, "_command_pool", None)]
+        # The gateway ``send`` handed it to, whatever the options say by now.
+        pools.append(getattr(getattr(message, "_myhome_handed_to", None), "_command_pool", None))
+        who = getattr(message, "who", getattr(message, "_who", None))
+        if who is not None and who not in (13, 1013):
+            if who in self.delegated_away_whos:
+                pools.append(getattr(self._get_secondary_for_who(who), "_command_pool", None))
+            pools.append(getattr(self._get_standby_gateway(), "_command_pool", None))
+        return any(sent is message for pool in pools for sent in getattr(pool, "_in_flight_messages", ()))
 
     def claim_in_flight_dimension_where(self, who: int, dimension: int) -> str | None:
         """Claim the sole point-to-point WHERE with an in-flight dimension request (#777)."""

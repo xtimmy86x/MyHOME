@@ -667,7 +667,7 @@ def test_mh201_f414_pr828_full_what_2_to_10_ladder_clamps_and_dim1_recall() -> N
 
 
 async def test_mh201_f414_pr828_live_integration_replay_zero_bounce_1pct_and_cover_33(
-    hass: HomeAssistant,
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Replay the 200-frame PR #828 capture end-to-end: 27 lights + cover 33 + zero-bounce 1% turn_on."""
     frames = _load_json(PR828_VERIFY_TRACE_PATH)["frames"]
@@ -704,6 +704,15 @@ async def test_mh201_f414_pr828_live_integration_replay_zero_bounce_1pct_and_cov
 
     handler: MyHOMEGatewayHandler = hass.data[DOMAIN][mac][CONF_ENTITY]
     handler._on_event_connection_state_change(True)
+
+    # The transport worker is mocked out. Complete probe writes explicitly so
+    # the brightness refresh can await delivery while the trace supplies replies.
+    async def status_written(_command):
+        written = hass.loop.create_future()
+        written.set_result(hass.loop.time())
+        return written
+
+    monkeypatch.setattr(handler, "send_status_request", AsyncMock(side_effect=status_written))
 
     async def _feed(raw: str) -> None:
         msg = OWNEvent.parse(raw) or OWNMessage.parse(raw)

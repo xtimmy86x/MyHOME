@@ -575,8 +575,8 @@ async def bus(hass, tmp_path):
     ("1", "opening", "open", 50),  # From closed, half the travel time up.
     ("2", "closing", "closed", 0),  # From half open, half the travel time down.
 ])
-async def test_a_status_relayed_after_the_delivery_is_the_same_movement(bus, what, moving, ended, position):
-    """1 and 4: the actuator's status comes after the grace, once the translation has been delivered."""
+async def test_a_late_real_status_confirms_the_previously_unconfirmed_translation(bus, what, moving, ended, position):
+    """With WHO 14 tracking, only the real status starts the motion clock."""
     if what == "2":  # Half open, so that it can close.
         bus.cover._motion.confirm(50)
         bus.cover._attr_current_cover_position = bus.cover._start_position = 50
@@ -588,18 +588,16 @@ async def test_a_status_relayed_after_the_delivery_is_the_same_movement(bus, wha
     arrived = bus.clock[0]
     assert bus.state().state not in ("opening", "closing") and len(_pending_releases(bus.hass)) == 1
     await bus.wait(TRANSLATION_GRACE)
-    assert bus.state().state == moving
-    assert bus.anchors == [arrived] and bus.cover._move_start_time == arrived
-    started, changed = bus.state().attributes["motion_started_at"], bus.state().last_changed
-    # The status relayed late: the same movement, neither a second start nor a new date.
+    assert bus.state().state not in ("opening", "closing")
+    assert bus.anchors == []
     await bus.wait(.4)
     await bus.send(f"*2*{what}*81##")
-    assert bus.anchors == [arrived] and bus.cover._move_start_time == arrived
-    assert bus.state().state == moving and bus.state().last_changed == changed
-    assert bus.state().attributes["motion_started_at"] == started
+    confirmed = bus.clock[0]
+    assert confirmed > arrived
+    assert bus.anchors == [confirmed] and bus.cover._move_start_time == confirmed
+    assert bus.state().state == moving
     assert bus.states == [moving]  # One movement entered, once.
-    # The run ends on its stop, timed from the translation.
-    bus.clock[0] = arrived + 15
+    bus.clock[0] = confirmed + 15
     await bus.send("*2*0*81##")
     assert bus.state().attributes["last_run_seconds"] == 15.0
     assert bus.state().attributes["current_position"] == position
@@ -623,7 +621,7 @@ async def test_a_status_inside_the_window_is_the_only_start(bus):
     ("*2*0*81##", [], None),  # The actuator reports it is stopped: it never moved.
     ("*2*1000#0*81##", [], None),  # A Stop translated after the direction: that run is over.
     ("*2*2*81##", ["closing"], "follower"),  # The actuator runs the other way.
-    ("*2*1000#2*81##", ["closing"], "follower"),  # The other way, and no status follows that either.
+    ("*2*1000#2*81##", [], None),  # Another translation still does not confirm motion.
 ])
 async def test_a_stop_or_reversal_in_the_window_decides_once(bus, follower, outcome, dated):
     """2: whatever follows the held `1000#1` in the window leaves one outcome and no timer behind."""
@@ -640,18 +638,22 @@ async def test_a_stop_or_reversal_in_the_window_decides_once(bus, follower, outc
     assert _pending_releases(bus.hass) == []
 
 
-async def test_a_reversal_after_the_delivery_is_a_new_run(bus):
-    """2: down pressed while the delivered up runs; the gateway's frames for it, then no status again."""
+async def test_a_reversal_needs_real_feedback_after_each_translation(bus):
+    """Unconfirmed translations never overwrite the last confirmed position."""
     await bus.send(*LIVE_UP)
-    up = bus.clock[0]
     await bus.wait(TRANSLATION_GRACE)
+    assert bus.anchors == []
+    await bus.send("*2*1*81##")
+    up = bus.clock[0]
     bus.clock[0] = up + 6
     await bus.send("*2*1000#0*81##", "*2*0*81##")
     stopped = bus.state().attributes["current_position"]
     assert bus.state().state == "open" and stopped == 20
     await bus.send("*2*1000#2*81##", step=.02)
-    down = bus.clock[0]
     await bus.wait(TRANSLATION_GRACE)
+    assert bus.states == ["opening", "open"]
+    await bus.send("*2*2*81##")
+    down = bus.clock[0]
     assert bus.states == ["opening", "open", "closing"]
     assert bus.anchors == [up, down]
     bus.clock[0] = down + 3
@@ -684,18 +686,12 @@ async def test_a_cover_removed_while_held_receives_nothing(hass, bus):
 
 
 async def test_a_dropped_connection_does_not_cancel_the_held_translation(hass, bus):
-    """3: the connection drops inside the window; the cover lives on and still gets its movement.
-
-    The translation is the gateway's report of a command already on the bus. A dropped event
-    session is one more way for the status to go missing, the case the translation stands in
-    for; the entities stay available through the reconnect grace and nothing is torn down.
-    """
+    """Losing the event connection does not turn a command into motor feedback."""
     gateway = bus.entry.runtime_data.gateway
     await bus.send(*LIVE_UP)
-    arrived = bus.clock[0]
     gateway._on_event_connection_state_change(False)
     await bus.wait(TRANSLATION_GRACE)
-    assert bus.state().state == "opening" and bus.anchors == [arrived]
+    assert bus.state().state == "closed" and bus.anchors == []
     gateway._on_event_connection_state_change(True)
     assert _pending_releases(hass) == []
 
@@ -747,11 +743,13 @@ async def test_a_locked_shutter_does_not_move_on_its_translation(bus):
     assert _pending_releases(bus.hass) == []
 
 
-async def test_an_unlocked_shutter_moves_on_its_translation_again(bus):
+async def test_an_unlocked_shutter_still_needs_motion_confirmation(bus):
     await bus.send("*14*0*81##", "*2*0*81##", "*14*1*81##")
     await bus.send(*LIVE_UP)
-    up = bus.clock[0]
     await bus.wait(TRANSLATION_GRACE)
+    assert bus.states == [] and bus.anchors == []
+    await bus.send("*2*1*81##")
+    up = bus.clock[0]
     assert bus.states == ["opening"] and bus.anchors == [up]
 
 
@@ -838,20 +836,16 @@ async def scoped(hass, tmp_path):
     ("*2*0*#7##", ("81", "82", "91")),  # A group nobody declared: any shutter may be in it.
 ])
 async def test_a_group_area_or_general_stop_in_the_window_cancels_the_held_movements(scoped, stop, stopped):
-    """Up on 81, 82 and 91 with no status, then a scope Stop inside the window: the shutters it
-    stopped never start; the others still get their movement, dated at their translation."""
+    """Scope Stop drops addressed translations; none can confirm physical motion."""
     await scoped.send("*2*1000#1*81##", "*2*1000#1*82##", "*2*1000#1*91##")
-    up = scoped.clock[0]
     assert len(_pending_releases(scoped.hass)) == 3
     await scoped.send(stop, step=.3)
+    assert len(_pending_releases(scoped.hass)) == 3 - len(stopped)
     await scoped.wait(TRANSLATION_GRACE)
     await scoped.wait(TRANSLATION_GRACE)  # Long after the window: nothing stale arrives.
     for w, cover in scoped.covers.items():
-        if w in stopped:
-            assert scoped.entered[w] == [] and not cover.is_opening, w
-            assert scoped.hass.states.get(f"cover.cover_{w}").state == "closed"
-        else:
-            assert scoped.entered[w] == ["opening"] and cover._move_start_time == up, w
+        assert scoped.entered[w] == [] and not cover.is_opening, w
+        assert scoped.hass.states.get(f"cover.cover_{w}").state == "closed"
     assert _pending_releases(scoped.hass) == []
 
 
@@ -907,19 +901,15 @@ async def test_a_group_stop_drops_its_declared_members_only(hass):
     ("*2*10#001#1*8##", ("81", "82")),  # Area 8.
 ])
 async def test_an_advanced_stop_in_the_window_cancels_the_held_movements(scoped, stop, stopped):
-    """Up on 81, 82 and 91 with no status, then an advanced Stop 0.3 s later: the shutters it
-    addresses never start; the others still get their movement, dated at their translation."""
+    """Advanced Stop cancels addressed translations without inventing other runs."""
     await scoped.send("*2*1000#1*81##", "*2*1000#1*82##", "*2*1000#1*91##")
-    up = scoped.clock[0]
     await scoped.send(stop, step=.3)
+    assert len(_pending_releases(scoped.hass)) == 3 - len(stopped)
     await scoped.wait(TRANSLATION_GRACE)
     await scoped.wait(TRANSLATION_GRACE)  # Long after the window: nothing stale arrives.
     for w, cover in scoped.covers.items():
-        if w in stopped:
-            assert scoped.entered[w] == [] and not cover.is_opening, w
-            assert scoped.hass.states.get(f"cover.cover_{w}").state == "closed"
-        else:
-            assert scoped.entered[w] == ["opening"] and cover._move_start_time == up, w
+        assert scoped.entered[w] == [] and not cover.is_opening, w
+        assert scoped.hass.states.get(f"cover.cover_{w}").state == "closed"
     assert _pending_releases(scoped.hass) == []
 
 
@@ -937,8 +927,7 @@ async def test_an_advanced_stop_in_the_window_cancels_the_held_movements(scoped,
     ("2", ("*2*1000#1*#5##",), ("81", "82")),
 ])
 async def test_a_collective_direction_in_the_window_overrides_the_held_movements(scoped, held, command, moved):
-    """A direction on 81, 82 and 91 with no status, then the other one to a scope 0.3 s later:
-    the shutters it addresses follow the scope, once; the others still get their own movement."""
+    """A real scope direction moves its members; translations alone remain unconfirmed."""
     for cover in scoped.covers.values():  # Half open, so that each can go either way.
         cover._motion.confirm(50)
         cover._attr_current_cover_position = cover._start_position = 50
@@ -946,19 +935,18 @@ async def test_a_collective_direction_in_the_window_overrides_the_held_movements
         cover.async_write_ha_state()
     for entered in scoped.entered.values():
         entered.clear()
-    own, other = ("opening", "closing") if held == "1" else ("closing", "opening")
+    other = "closing" if held == "1" else "opening"
     await scoped.send(*(f"*2*1000#{held}*{w}##" for w in scoped.covers))
-    first = scoped.clock[0]
     await scoped.send(command[0], step=.3)
     await scoped.send(*command[1:], step=.1)
     last = scoped.clock[0]  # The scope's status when it comes, else its translation, dates the run.
     await scoped.wait(TRANSLATION_GRACE)
     await scoped.wait(TRANSLATION_GRACE)  # Long after the window: nothing stale arrives.
     for w, cover in scoped.covers.items():
-        if w in moved:
+        if w in moved and not frame(command[-1]).is_translation:
             assert scoped.entered[w] == [other] and cover._move_start_time == pytest.approx(last), w
         else:
-            assert scoped.entered[w] == [own] and cover._move_start_time == first, w
+            assert scoped.entered[w] == [] and not cover.is_opening and not cover.is_closing, w
     assert _pending_releases(scoped.hass) == []
 
 

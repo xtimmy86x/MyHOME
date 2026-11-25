@@ -7,12 +7,14 @@ import pytest
 from homeassistant.exceptions import HomeAssistantError
 from OWNd.message import OWNMessage
 
+from custom_components.myhome.cover import MyHOMECover
 from custom_components.myhome.cover_motion import (
     END_SETTLE_MARGIN,
     CoverMotionModel,
     MotionPosition,
 )
 from custom_components.myhome.cover_motion_runtime import CoverMotionTracker
+from custom_components.myhome.cover_profiles import bind_cover
 from tests.test_cover_nonlinear_backend import nonlinear
 from tests.test_cover_profiles import plant as plant_fixture
 from tests.test_cover_travel_scaling import write
@@ -66,6 +68,18 @@ async def test_unknown_state_needs_full_run_and_restart_does_not_invent_slat_pos
     with patch('custom_components.myhome.cover.time.monotonic', return_value=126):
         assert cover.current_cover_position == 100
         cover._freeze_position(126)
+    cover._cancel_stop_task()
+    # A restart creates a new entity. A restore callback on an entity that has
+    # already moved must preserve its live state, as required by upstream #977.
+    cover = MyHOMECover(hass, "Test cover", "Test cover", "11", "2", "11",
+                        None, False, "BTicino", "Standard", plant.gateways[0], travel_time=30)
+    cover.entity_id = plant.records[0].entity_id
+    cover.hass = hass
+    cover.async_write_ha_state = MagicMock()
+    cover.async_schedule_update_ha_state = MagicMock()
+    cover.async_on_remove = MagicMock()
+    plant.covers.append(cover)
+    await bind_cover(hass, cover)
     await cover.async_restore_last_state(SimpleNamespace(state='closed', attributes={'current_position': 0}))
     assert cover.current_cover_position is None
     with patch('custom_components.myhome.cover.time.monotonic', return_value=200):

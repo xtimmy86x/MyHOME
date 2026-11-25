@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from OWNd.message import (
+    OWNActuatorLockEvent,
     OWNAlarmEvent,
     OWNAutomationEvent,
     OWNAuxEvent,
@@ -30,6 +31,7 @@ from OWNd.message import (
     OWNSceneEvent,
 )
 
+from .actuator_lock import actuator_locks_of
 from .const import (
     BUS_ROUTING,
     CONF_LONG_PRESS,
@@ -371,11 +373,11 @@ class GatewayEventDispatcher:
         if isinstance(message, OWNMessage):
             dispatcher_send(self.hass, f"myhome_message_{self.handler.mac}", message)
             self.tell_central_unit(message, *central)
+            self.handler._correlate_shared_bus_traffic(message)
+            self.handler._bridge_to_primary(message)
             echo_watchdog = echo_watchdog_of(self.handler)
             if echo_watchdog is not None:
                 echo_watchdog.status_seen(message)
-            self.handler._correlate_shared_bus_traffic(message)
-            self.handler._bridge_to_primary(message)
             # Diagnostic WHOs (1001 for lighting) belong to their functional subsystem:
             # on a shared bus only that subsystem's owner raises the device's issues.
             if who_int in (1, 4, 1001):
@@ -537,7 +539,18 @@ class GatewayEventDispatcher:
                     self.handler.log_id,
                     message,
                 )
-        elif isinstance(message, OWNHeatingCommand) and message.dimension is not None and message.dimension == 14 and self._is_active_for_who(4):
+        elif (
+            isinstance(message, OWNHeatingCommand)
+            and message.dimension is not None
+            and message.dimension == 14
+            # A setpoint WRITE seen on the bus (``*#4*2*#14*0200*2##``, ``*#4*#2*#14*0280*1##``:
+            # central_restore_3100_live_2026-11-12, plants/issue_333_myhomeserver1) is followed
+            # by a read of the zone. The REQUEST of the same dimension (``*#4*2*14##``, the
+            # silent-zone poll's own read; ``*#4*#2*14##``) parses to the same class and
+            # dimension and changes nothing: it must not start a zone status read.
+            and bool(getattr(message, "is_dimension_writing", False))
+            and self._is_active_for_who(4)
+        ):
             if not getattr(self.handler, "supports_zone_status", True):
                 return
             iface = getattr(message, "interface", None)
@@ -880,6 +893,23 @@ class GatewayEventDispatcher:
                     self.handler.log_id,
                     message.human_readable_log,
                 )
+        elif isinstance(message, OWNActuatorLockEvent):
+            if message.is_translation:
+                self._logger.debug(
+                    "%s Ignoring translation message `%s`",
+                    self.handler.log_id,
+                    message,
+                )
+            else:
+                self._logger.debug(
+                    "%s %s",
+                    self.handler.log_id,
+                    message.human_readable_log,
+                )
+                if self._is_active_for_who(1) or self._is_active_for_who(2):
+                    actuator_locks = actuator_locks_of(self.handler)
+                    if actuator_locks is not None:
+                        actuator_locks.observe(message)
         else:
             self._logger.debug(
                 "%s Unsupported message type: `%s`",

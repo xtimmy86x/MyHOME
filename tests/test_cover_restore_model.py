@@ -111,7 +111,9 @@ async def test_a_moving_cover_saves_no_model_state(modelled):
     at_end(m, 100)
     await m.cover.async_close_cover()
     await written_and_started(m, CLOSE)
-    assert saved(m.cover) is None
+    # WHO 14 lock/last-run data is still durable, but an in-flight model state
+    # cannot be restored as a stationary physical position.
+    assert "motion" not in saved(m.cover)
     m.cover._cancel_stop_task()
 
 

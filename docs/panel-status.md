@@ -1,8 +1,11 @@
 # Administration panel: implementation and validation status
 
-Updated **22 November 2026**. Functional baseline: `feat/myhome-sidepanel` at
-[`c08484e1`](https://github.com/xtimmy86x/MyHOME/commit/c08484e1e7c412eb9e2a0be88e7b460c48a3e6bc),
-after fork PR #23. Panel asset version: **0.43.0**.
+Updated **25 November 2026**. This integration branch starts from
+`feat/myhome-sidepanel` at [`60c40ed8`](https://github.com/xtimmy86x/MyHOME/commit/60c40ed8e2bb530c3b55f716d67714acd2fd4750)
+(after fork PR #24), and merges upstream `chore/release-2.0.1` through
+[`35467360`](https://github.com/OpenWebNet-HA/MyHOME/commit/354673602b5c5e64fc27a1ff659c2a694361b4ec),
+the final merge of upstream #977, including its prerequisite fixes and OWNd **2.0.2**.
+Panel asset version: **0.43.0**.
 
 The panel is implemented on the development branch. Upstream
 [PR #374](https://github.com/OpenWebNet-HA/MyHOME/pull/374) remains a **draft**;
@@ -40,12 +43,20 @@ All PR numbers in this table refer to `xtimmy86x/MyHOME`.
 | [#19](https://github.com/xtimmy86x/MyHOME/pull/19), [#20](https://github.com/xtimmy86x/MyHOME/pull/20) | Preserve source timings, contain session-event failures, recover from refused starts and retry profile assignment. |
 | [#21](https://github.com/xtimmy86x/MyHOME/pull/21) | Upstream `chore/release-2.0.1` integrated through `80657600`, preserving panel profiles, nonlinear timing and Dimension 10 promotion protections. |
 | [#22](https://github.com/xtimmy86x/MyHOME/pull/22), [#23](https://github.com/xtimmy86x/MyHOME/pull/23) | Cover-name/measurement-order improvements and preview-before-save handling for shared profiles. |
+| [#24](https://github.com/xtimmy86x/MyHOME/pull/24) | Upstream #975 integrated with sidepanel timing guards; installation test reported successful by the maintainer. |
 
 [Fork #14](https://github.com/xtimmy86x/MyHOME/pull/14) remains the design discussion,
 not a PR intended for merge.
 
 ## Validation evidence
 
+- For the #977 integration, the complete backend suite passed **9,245 tests**;
+  four additional concurrency regressions then passed with the seven new WHO 14
+  integration tests (**11 focused tests**). Combined line coverage is **100%**
+  across all 95 integration modules (30,697 statements). The frontend suite
+  passed **1,026 tests**. Strict typing reports zero errors; Ruff, documentation
+  synchronization and Home Assistant architectural checks passed. Local runtime:
+  Python 3.14.10, Home Assistant 2026.10.4 and OWNd 2.0.2.
 - At PR #23 head `40ff0e74`, all five workflows passed: panel tests,
   backend tests/coverage, strict typing, hassfest and HACS validation.
   The PR reports **1,026 frontend tests** and **8,205 backend tests**.
@@ -69,17 +80,22 @@ not a PR intended for merge.
    follow-up work. The old path B profile-check and path C points-only designs
    remain development previews, disabled by default; assigning a profile through
    Change profile is implemented and must not be confused with those previews.
-3. **Upstream cover changes:** [#975](https://github.com/OpenWebNet-HA/MyHOME/pull/975)
-   merged upstream on 22 November 2026. This integration applies its exact commit
-   `5b742669094be1907f48ee0f4f69380171614667` after the #21 baseline, without claiming
-   a full upstream sync. Linear timed covers gain the remaining-travel/drift settle
-   timer; the panel's nonlinear model retains its own geometry-based settle.
-   Profile changes invalidate drift when their effective timings change, native
-   timing edits remain durable before application, and unavailable covers still
-   interrupt panel calibration.
-   [#977](https://github.com/OpenWebNet-HA/MyHOME/pull/977) (WHO 14 lock tracking)
-   remains separate and was still open at this update. Review its final upstream
-   state before integration; WHO 14 wizard handling follows after the backend settles.
+3. **WHO 14 integration and panel follow-up:** upstream
+   [#975](https://github.com/OpenWebNet-HA/MyHOME/pull/975) was integrated and
+   field-tested in [fork #24](https://github.com/xtimmy86x/MyHOME/pull/24).
+   This branch now includes the final [#977](https://github.com/OpenWebNet-HA/MyHOME/pull/977)
+   and the intervening upstream fixes. Linear covers retain drift-bounded settle;
+   the panel retains nonlinear geometry, atomic profile/native timing writes,
+   deferred profile application and Dimension 10 promotion guards. Nonlinear
+   restore records retain both model state and actuator locks. A legacy synthetic
+   command translation cannot confirm motor motion when WHO 14 tracking is active;
+   the upstream real-echo/status-probe path decides whether the actuator moved.
+   **The panel calibration session still needs its own WHO 14 start/refusal and
+   mid-session interruption guards**, as coordinated with Interstellar. Native
+   calibration guards are already present upstream. Review and test this
+   integration before merging it; Interstellar's panel follow-up can then build
+   on the aligned branch. Upstream #374 stays draft pending combined physical
+   validation and review of that follow-up.
 4. **Release decision:** keep #374 draft until the combined result and remaining
    scope have been reviewed. No public-preview or release date is committed here.
 
